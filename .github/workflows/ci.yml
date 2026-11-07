@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # Only installs Lean: the caches and the build are the explicit steps below.
+      - uses: leanprover/lean-action@v1
+        with:
+          auto-config: false
+          use-mathlib-cache: false
+          build: false
+
+      - name: Download Mathlib and complexitylib caches
+        run: scripts/get-cache.sh
+
+      - name: Build
+        run: lake build
+
+      # Unsandboxed, same as running it locally on macOS. Papers whose comparator.json doesn't
+      # name any theorem yet are skipped, since comparator refuses an empty list.
+      - name: Check each paper's Solution against its Challenge
+        run: |
+          for config in */comparator.json; do
+            echo "::group::$config"
+            if jq -e '(.theorem_names + (.definition_names // [])) | length == 0' "$config" > /dev/null; then
+              echo "No theorems listed yet; skipping."
+            else
+              lake comparator --inadvisably-no-sandbox --config "$config"
+            fi
+            echo "::endgroup::"
+          done

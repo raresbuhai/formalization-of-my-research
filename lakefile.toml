@@ -1,0 +1,82 @@
+name = "raresbuhai-papers"
+version = "0.1.0"
+keywords = ["math"]
+license = "Apache-2.0"
+defaultTargets = ["Background", "BKS23", "BBKS24", "BGHKLMM26", "BCFGJPSSV26", "BHSV25", "KMedian195"]
+
+[leanOptions]
+pp.unicode.fun = true # pretty-prints `fun a ↦ b`
+autoImplicit = false
+relaxedAutoImplicit = false
+weak.linter.mathlibStandardSet = true
+maxSynthPendingDepth = 3
+
+# Complexity theory and algorithms: machine models, P, NP, BPP, reductions, and the `polytime`
+# tactic. Built on CSLib, which brings Mathlib; we take both at the versions complexitylib pins
+# rather than pinning them separately. To upgrade, change `rev` to a newer complexitylib commit,
+# copy that commit's `lean-toolchain` here, and run `lake update`.
+[[require]]
+name = "complexitylib"
+git = "https://github.com/cslib-community/complexitylib"
+rev = "0ebd4671c2e7278a91f5671c11109bb254ae413c"
+
+# Libraries copied from elsewhere live in `Imported/`, which is only a folder: `srcDir` keeps their
+# module names (`TauCeti.*`, not `Imported.TauCeti.*`).
+
+# Files copied from TauCeti (github.com/TauCetiProject/TauCeti, Apache-2.0), adapted to our Mathlib.
+# Module names are kept, so the files can be replaced by the real library once it shares our Mathlib.
+[[lean_lib]]
+name = "TauCeti"
+srcDir = "Imported"
+
+# Files copied from OpenAI's library (github.com/openai/math, Apache-2.0), adapted to our Lean and
+# Mathlib: Majority is Stablest and the Walsh analysis it uses. See Imported/OAI/README.md.
+[[lean_lib]]
+name = "OAI"
+srcDir = "Imported"
+leanOptions = { weak.linter.mathlibStandardSet = false, weak.linter.style.header = false, weak.linter.unusedTactic = false }
+
+# Files copied from github.com/epfl-thl2/project-k-median (written by Codex), adapted to our Lean
+# and Mathlib: the 1.95 bound on the factor-revealing program of arXiv:2610.18144 (Theorem 4.3). See Imported/KMedian195/README.md. Auto-bound implicits as in the
+# source; the overlapping-instances linter is off for its many duplicated `[NeZero n]` binders.
+[[lean_lib]]
+name = "KMedian195"
+srcDir = "Imported"
+leanOptions = { autoImplicit = true, weak.linter.mathlibStandardSet = false, weak.linter.style.header = false, weak.linter.unusedTactic = false, weak.linter.overlappingInstances = false }
+
+# Material shared by several papers, including the sum-of-squares method (Background/SumOfSquares).
+# Imports only Mathlib, complexitylib (with CSLib) and the libraries in Imported/, never a paper.
+# Mathlib's header check demands Mathlib-style copyright lines, which this repository doesn't use.
+[[lean_lib]]
+name = "Background"
+leanOptions = { weak.linter.style.header = false }
+
+# arXiv:2212.05619 — Algorithms approaching the threshold for semi-random planted clique.
+[[lean_lib]]
+name = "BKS23"
+globs = ["BKS23.*"]
+leanOptions = { weak.linter.style.header = false }
+
+# arXiv:2404.14159 — Semirandom planted clique and the restricted isometry property.
+[[lean_lib]]
+name = "BBKS24"
+globs = ["BBKS24.*"]
+leanOptions = { weak.linter.style.header = false }
+
+# arXiv:2610.27216 — Optimal algorithms and hardness for Max-Cut in bounded degree graphs.
+[[lean_lib]]
+name = "BGHKLMM26"
+globs = ["BGHKLMM26.*"]
+leanOptions = { weak.linter.style.header = false }
+
+# arXiv:2610.18144 and arXiv:2610.17172 — A better-than-2 approximation for k-median, Parts I and II.
+[[lean_lib]]
+name = "BCFGJPSSV26"
+globs = ["BCFGJPSSV26.*"]
+leanOptions = { weak.linter.style.header = false }
+
+# arXiv:2508.02825 — Finding colorings in one-sided expanders.
+[[lean_lib]]
+name = "BHSV25"
+globs = ["BHSV25.*"]
+leanOptions = { weak.linter.style.header = false }

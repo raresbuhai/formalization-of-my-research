@@ -1,0 +1,23 @@
+{
+  "challenge_module": "BHSV25.Challenge",
+  "solution_module": "BHSV25.Solution",
+  "theorem_names": [
+    "BHSV25.independentSet_approximation",
+    "BHSV25.vertexCover_approximation",
+    "BHSV25.threeColoring_balanced",
+    "BHSV25.threeColoring_independentSet_or_coloring",
+    "BHSV25.threeColoring_unbalanced_hardness",
+    "BHSV25.threeColoring_lowRank_hardness",
+    "BHSV25.thresholdRank",
+    "BHSV25.thresholdRank_graph",
+    "BHSV25.expanderColoring_distinctRows",
+    "BHSV25.expanderColoring_repeatedRows_hardness",
+    "BHSV25.expanderColoring_algorithm",
+    "BHSV25.expanderColoring_hardness"
+  ],
+  "permitted_axioms": [
+    "propext",
+    "Quot.sound",
+    "Classical.choice"
+  ]
+}

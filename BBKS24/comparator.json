@@ -1,0 +1,12 @@
+{
+  "challenge_module": "BBKS24.Challenge",
+  "solution_module": "BBKS24.Solution",
+  "theorem_names": [
+    "BBKS24.semirandom_planted_clique"
+  ],
+  "permitted_axioms": [
+    "propext",
+    "Quot.sound",
+    "Classical.choice"
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "challenge_module": "BGHKLMM26.Challenge",
+  "solution_module": "BGHKLMM26.Solution",
+  "theorem_names": [
+    "BGHKLMM26.exists_unique_isGWMinimizer",
+    "BGHKLMM26.max2lin_approximation",
+    "BGHKLMM26.maxCut_hardness",
+    "BGHKLMM26.maxCut_inapproximability",
+    "BGHKLMM26.maxCut_integrality_gap"
+  ],
+  "permitted_axioms": [
+    "propext",
+    "Quot.sound",
+    "Classical.choice"
+  ]
+}

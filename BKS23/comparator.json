@@ -1,0 +1,13 @@
+{
+  "challenge_module": "BKS23.Challenge",
+  "solution_module": "BKS23.Solution",
+  "theorem_names": [
+    "BKS23.semirandom_planted_clique_two_thirds",
+    "BKS23.semirandom_planted_clique"
+  ],
+  "permitted_axioms": [
+    "propext",
+    "Quot.sound",
+    "Classical.choice"
+  ]
+}

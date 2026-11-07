@@ -1,0 +1,15 @@
+{
+  "challenge_module": "BCFGJPSSV26.Challenge",
+  "solution_module": "BCFGJPSSV26.Solution",
+  "theorem_names": [
+    "BCFGJPSSV26.kMedian_approximation",
+    "BCFGJPSSV26.kMedian_pseudoApproximation",
+    "BCFGJPSSV26.stable_kMedian_approximation",
+    "BCFGJPSSV26.facilityLocation_lmp"
+  ],
+  "permitted_axioms": [
+    "propext",
+    "Quot.sound",
+    "Classical.choice"
+  ]
+}
