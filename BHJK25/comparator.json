@@ -1,0 +1,13 @@
+{
+  "challenge_module": "BHJK25.Challenge",
+  "solution_module": "BHJK25.Solution",
+  "theorem_names": [
+    "BHJK25.reed_solomon_counterexample",
+    "BHJK25.top_eigenvalue_counterexample"
+  ],
+  "permitted_axioms": [
+    "propext",
+    "Quot.sound",
+    "Classical.choice"
+  ]
+}
