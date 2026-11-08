@@ -7,23 +7,27 @@ Max 2-LIN(2) whose expected value is at least `(α_GW + c/(d log d))` times the 
 variable appears in at most `d` constraints. Theorem 1.2 says that, assuming the Unique Games
 Conjecture, telling graphs of maximum degree `d` with Max-Cut value at least `c* - C/d` from those
 with value at most `s* + C log² d / d` with bounded error in polynomial time would put `NP` in
-`BPP`. Both are proved in [Solution.lean](Solution.lean), with only the standard axioms, and
-`lake comparator` checks them.
+`BPP`; it is formalized with `C log d / d` in place of `C log² d / d`. Both are proved in
+[Solution.lean](Solution.lean), with only the standard axioms, and `lake comparator` checks
+them.
 
 [BGHKLMM26, Corollary 1.3] is `BGHKLMM26.maxCut_inapproximability`: assuming the Unique Games
 Conjecture, a randomized polynomial-time algorithm whose expected cut is at least
-`(α_GW + C log² d / d)` times the maximum on graphs of maximum degree `d` would put `NP` in `BPP`.
+`(α_GW + C log d / d)` times the maximum on graphs of maximum degree `d` would put `NP` in `BPP`.
 It is proved from Theorem 1.2 and checked by `lake comparator` too.
 
 [BGHKLMM26, Theorem 1.4] is `BGHKLMM26.maxCut_integrality_gap`: for every large `d`, some graph
 of maximum degree `d` has Goemans–Williamson SDP value with triangle inequalities at least
-`c* - C/d` and Max-Cut value at most `s* + C log² d / d`. It is unconditional, proved from
+`c* - C/d` and Max-Cut value at most `s* + C log d / d`. It is unconditional, proved from
 Theorem 7.1, and checked by `lake comparator` too.
 
-Theorems 1.2 and 1.4 and Corollary 1.3 are stated with the paper's `log² d`. The robust Majority
-is Stablest theorem behind them (Theorem 7.1) is proved here with Eldan's published estimate of the
-Gaussian noise stability deficit (Invent. Math. 2015), proved from scratch, in place of Heilman's
-robust Borell inequality.
+Theorems 1.2 and 1.4 and Corollary 1.3 are stated with `log d / d`, one logarithm better than
+the paper's `log² d / d`. The robust Majority is Stablest theorem behind them (Theorem 7.1) rests
+on the Gaussian lemma with the error `C √Δ` (Lemma 7.4), which the paper takes from Heilman's
+robust Borell inequality. Here it is proved from scratch, in two steps: Eldan's published estimate
+of the Gaussian noise stability deficit (Invent. Math. 2015) brings the function close to the
+halfspace, and a local spectral argument at the halfspace gives the error `C √Δ`. With that error,
+the multiscale union bound of Lemma 6.6 starts at the scale `K log d / d`.
 
 The formal proof follows the paper's argument in outline, though some of its steps take a
 different route.
@@ -55,7 +59,7 @@ Numbers refer to the arXiv version (v2), whose counters are shared within each s
 * **The SDP** of Theorem 1.4 (`BGHKLMM26.IsSDPSolution`, `BGHKLMM26.sdpValue`): unit vectors in
   `ℝⁿ` with the triangle inequalities of Section 3, valued by the average of `‖vᵢ - vⱼ‖² / 4` over
   the edges. The theorem exhibits a solution, and also states the integrality gap
-  `MaxCut ≤ (α_GW + C log² d / d) · SDP` that follows. Theorem 1.4 is unconditional.
+  `MaxCut ≤ (α_GW + C log d / d) · SDP` that follows. Theorem 1.4 is unconditional.
 
 ## Map of the proof
 
@@ -72,9 +76,9 @@ Numbers refer to the arXiv version (v2), whose counters are shared within each s
 
 ### Theorem 1.2
 
-Assuming Theorem 7.1 (`BGHKLMM26.Hard.RobustMIS`, robust Majority is Stablest with Eldan's
-error), [Hardness/Main.lean](Hardness/Main.lean) proves the theorem
-(`BGHKLMM26.Hard.maxCut_hardness_of_robustMIS`); [RobustMIS/Main.lean](RobustMIS/Main.lean)
+Assuming Theorem 7.1 (`BGHKLMM26.Hard.RobustMIS`, robust Majority is Stablest with the error
+`C √η`), [Hardness/Main.lean](Hardness/Main.lean) proves the theorem
+(`BGHKLMM26.Hard.maxCut_hardness_of_robustMIS`); [RobustMIS/Final.lean](RobustMIS/Final.lean)
 proves Theorem 7.1 (`BGHKLMM26.RobustMIS.robustMIS`).
 
 | Files | Content |
@@ -86,7 +90,7 @@ proves Theorem 7.1 (`BGHKLMM26.RobustMIS.robustMIS`).
 | [Hardness/Decoder.lean](Hardness/Decoder.lean), [Hardness/Coins.lean](Hardness/Coins.lean), [Hardness/Glue.lean](Hardness/Glue.lean) | The law of a decoded edge against the KKMO graph; the coins as independent blocks. |
 | [Hardness/Concentration.lean](Hardness/Concentration.lean), [Hardness/SparsifyMain.lean](Hardness/SparsifyMain.lean) | Hoeffding, Bernstein, binomial tails, Hamming balls; the sparsification (Section 6) for an abstract law. |
 | [Hardness/Machine.lean](Hardness/Machine.lean), [Hardness/Main.lean](Hardness/Main.lean) | The reduction in polynomial time; completeness and soundness of the reduction and the assembly. |
-| [RobustMIS/](RobustMIS) (see its [README](RobustMIS/README.md)) | Theorem 7.1. The Gaussian lemma (Lemma 7.4 with Eldan's error) by Eldan's argument in analytic form: the heat flow, the deficit and drift identities, the static Gaussian bounds, the bootstrap. The transfer to the cube by an invariance principle for pairs of polynomials (Bonami, Lindeberg, mollification), in place of the anti-concentration of regular forms and Mossel–Neeman's Lemma 7.3; the truncation; and the smoothing removal, with a bound for regular LTFs in place of Peres's bound. |
+| [RobustMIS/](RobustMIS) (see its [README](RobustMIS/README.md)) | Theorem 7.1. The Gaussian lemma (Lemma 7.4) in two steps: Eldan's estimate, with the error `C √(Δ log(e/Δ))`, by Eldan's argument in analytic form (the heat flow, the deficit and drift identities, the static Gaussian bounds, the bootstrap); then the error `C √Δ` by a local spectral argument at the halfspace (the Mehler kernel along its normal, and the spectral gap of the noise operator from TauCeti's Hermite basis). The transfer to the cube by an invariance principle for pairs of polynomials (Bonami, Lindeberg, mollification), in place of the anti-concentration of regular forms and Mossel–Neeman's Lemma 7.3; the truncation; and the smoothing removal, with a bound for regular LTFs in place of Peres's bound. |
 
 How the reduction is implemented:
 
@@ -97,11 +101,11 @@ How the reduction is implemented:
   soundness, and the robust inverse is applied to the smoothed `T_{1-γ} g_u`.
 * **The sparsification** succeeds with probability `9/10` on each side, so that it composes with
   a bounded-error algorithm (`BGHKLMM26.Hard.RandReducible`).
-* **The multiscale union bound** (Lemma 6.6) starts at the scale `λ = K log² D / D`
-  (`BGHKLMM26.Hard.lam`), at which Bernstein's bound beats the Hamming balls of radius
-  `C₁ √(η log(1/η))` (`BGHKLMM26.Hard.radius_entropy_le`). The union over the tuples of LTFs is
-  bounded by `exp(n / A(d))`, with the number of labels `R` large depending on `d` through the
-  alphabet enlargement.
+* **The multiscale union bound** (Lemma 6.6) starts at the scale `λ = K log D / D`
+  (`BGHKLMM26.Hard.lam`), at which Bernstein's bound beats the Hamming balls of radius `C₁ √η`
+  (`BGHKLMM26.Hard.radius_entropy_le`). The union over the tuples of LTFs is bounded by
+  `exp(n / A(d))`, with the number of labels `R` large depending on `d` through the alphabet
+  enlargement.
 
 ### Corollary 1.3
 

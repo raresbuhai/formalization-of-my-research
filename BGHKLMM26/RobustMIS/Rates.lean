@@ -9,15 +9,12 @@ public import Mathlib.Analysis.Convex.SpecificFunctions.Pow
 # The rates `ψ` and `ω`
 
 Lemma 3.4 (`ψ(x) = x √(log(1/x))`, the inversion of `x / log(1/x)`) and Lemma 1.3 (`ω`, here
-`sqrtLog`) of `eldan-proof.tex`, with the concavity of `ω` (audit issue 1; used by `Section 5`
-of the paper when averaging Theorem 7.1) and the comparison `ω(η) ≤ √2 √(η log(1/η))` used for
-the final form of Theorem 7.1.
+`sqrtLog`) of `eldan-proof.tex`: the facts about `ω` that Eldan's estimate (`gaussian_main`) and
+the sharp Gaussian lemma (`gaussian_sharp`) use, its continuity and monotonicity and
+`√(min x 1) ≤ ω(x)`.
 
-Proofs: `ω = √(g̃)` with `g̃(x) = g(min(x, 1))`, `g(y) = y log(e/y) = y - y log y`
-(`Rates.gl`; `g = id + negMulLog` is concave on `[0, ∞)` by Mathlib's `concaveOn_negMulLog`, and
-nondecreasing on `[0, 1]`). Concavity of `ω` on `[0, ∞)` follows by composing concave
-nondecreasing functions (`√`, `g`) with concave ones (`min(·, 1)`), and subadditivity from
-concavity and `ω(0) = 0`. Lemma 3.4(a) is proved from `ψ' = √L - 1/(2√L)`, `L = log(1/x)`.
+Proofs: `ω = √(g̃)` with `g̃(x) = g(min(x, 1))`, `g(y) = y log(e/y) = y - y log y` (`Rates.gl`,
+nondecreasing on `[0, 1]`). Lemma 3.4(a) is proved from `ψ' = √L - 1/(2√L)`, `L = log(1/x)`.
 -/
 
 @[expose] public section
@@ -38,22 +35,9 @@ theorem gl_eq (y : ℝ) : y * Real.log (exp 1 / y) = gl y := by
 
 theorem continuous_gl : Continuous gl := continuous_id.sub continuous_mul_log
 
-theorem gl_le_one {y : ℝ} (hy : 0 ≤ y) : gl y ≤ 1 := by
-  have := self_sub_one_le_mul_log hy
-  unfold gl; linarith
-
 theorem le_gl {y : ℝ} (h0 : 0 ≤ y) (h1 : y ≤ 1) : y ≤ gl y := by
   have := mul_log_nonpos h0 h1
   unfold gl; linarith
-
-theorem gl_nonneg {y : ℝ} (h0 : 0 ≤ y) (h1 : y ≤ 1) : 0 ≤ gl y := h0.trans (le_gl h0 h1)
-
-theorem gl_one : gl 1 = 1 := by simp [gl]
-
-theorem concaveOn_gl : ConcaveOn ℝ (Ici 0) gl := by
-  have h := (concaveOn_id (convex_Ici (0 : ℝ))).add concaveOn_negMulLog
-  convert h using 1
-  ext y; simp [gl, negMulLog]; ring
 
 theorem monotoneOn_gl : MonotoneOn gl (Icc 0 1) := by
   refine monotoneOn_of_hasDerivWithinAt_nonneg (f' := fun y ↦ -Real.log y) (convex_Icc 0 1)
@@ -80,28 +64,6 @@ theorem sqrtLog_eq_gl (x : ℝ) : sqrtLog x = √(gl (clip01 x)) := by
 theorem sqrtLog_eq_gt1 {x : ℝ} (hx : 0 ≤ x) : sqrtLog x = √(gt1 x) := by
   rw [sqrtLog_eq_gl, clip01_eq hx, gt1]
 
-theorem concaveOn_comp_of_monotoneOn {s t : Set ℝ} {f g : ℝ → ℝ} (hg : ConcaveOn ℝ t g)
-    (hg' : MonotoneOn g t) (hf : ConcaveOn ℝ s f) (hmaps : MapsTo f s t) :
-    ConcaveOn ℝ s (g ∘ f) :=
-  ⟨hf.1, fun _ hx _ hy _ _ ha hb hab ↦
-    (hg.2 (hmaps hx) (hmaps hy) ha hb hab).trans
-      (hg' (hg.1 (hmaps hx) (hmaps hy) ha hb hab) (hmaps (hf.1 hx hy ha hb hab))
-        (hf.2 hx hy ha hb hab))⟩
-
-theorem concaveOn_gt1 : ConcaveOn ℝ (Ici 0) gt1 := by
-  have hmin : ConcaveOn ℝ (Ici (0 : ℝ)) (fun x ↦ min x 1) :=
-    (concaveOn_id (convex_Ici (0 : ℝ))).inf (concaveOn_const 1 (convex_Ici 0))
-  have := concaveOn_comp_of_monotoneOn (concaveOn_gl.subset Icc_subset_Ici_self (convex_Icc 0 1))
-    monotoneOn_gl hmin (fun x hx ↦ ⟨le_min hx zero_le_one, min_le_right _ _⟩)
-  exact this
-
-theorem gt1_mem {x : ℝ} (hx : 0 ≤ x) : gt1 x ∈ Icc (0 : ℝ) 1 :=
-  ⟨gl_nonneg (le_min hx zero_le_one) (min_le_right _ _), gl_le_one (le_min hx zero_le_one)⟩
-
-theorem concaveOn_sqrt_gt1 : ConcaveOn ℝ (Ici 0) (fun x ↦ √(gt1 x)) :=
-  concaveOn_comp_of_monotoneOn (g := fun y ↦ √y) strictConcaveOn_sqrt.concaveOn
-    (fun _ _ _ _ h ↦ sqrt_le_sqrt h) concaveOn_gt1 (fun _ hx ↦ (gt1_mem hx).1)
-
 end Rates
 
 open Rates
@@ -113,16 +75,9 @@ theorem sqrtLog_nonneg (x : ℝ) : 0 ≤ sqrtLog x := Real.sqrt_nonneg _
 theorem sqrtLog_zero : sqrtLog 0 = 0 := by
   simp [sqrtLog, clip01]
 
-theorem sqrtLog_of_nonpos {x : ℝ} (hx : x ≤ 0) : sqrtLog x = 0 := by
-  simp [sqrtLog, clip01, max_eq_right hx]
-
 theorem sqrtLog_eq {x : ℝ} (hx : x ∈ Icc (0 : ℝ) 1) :
     sqrtLog x = √(x * Real.log (exp 1 / x)) := by
   rw [sqrtLog, clip01, max_eq_left hx.1, min_eq_left hx.2]
-
-theorem sqrtLog_le_one (x : ℝ) : sqrtLog x ≤ 1 := by
-  rw [sqrtLog_eq_gl, sqrt_le_one]
-  exact gl_le_one (clip01_mem x).1
 
 theorem monotone_sqrtLog : Monotone sqrtLog := by
   intro x y hxy
@@ -135,75 +90,10 @@ theorem continuous_sqrtLog : Continuous sqrtLog := by
   rw [this]
   exact (continuous_gl.comp ((continuous_id.max continuous_const).min continuous_const)).sqrt
 
-/-- `ω` is concave on `[0, ∞)` (audit issue 1). -/
-theorem concaveOn_sqrtLog : ConcaveOn ℝ (Ici 0) sqrtLog :=
-  concaveOn_sqrt_gt1.congr fun _ hx ↦ (sqrtLog_eq_gt1 hx).symm
-
-/-- `ω` is subadditive on `[0, ∞)`. -/
-theorem sqrtLog_add_le {x y : ℝ} (hx : 0 ≤ x) (hy : 0 ≤ y) :
-    sqrtLog (x + y) ≤ sqrtLog x + sqrtLog y := by
-  rcases eq_or_lt_of_le (add_nonneg hx hy) with h0 | h0
-  · rw [← h0, sqrtLog_zero]; exact add_nonneg (sqrtLog_nonneg _) (sqrtLog_nonneg _)
-  have hxy : (0 : ℝ) ≤ x + y := h0.le
-  have key : ∀ {a b : ℝ}, 0 ≤ a → 0 ≤ b → 0 < a + b →
-      a / (a + b) * sqrtLog (a + b) ≤ sqrtLog a := by
-    intro a b ha hb hab
-    have h := concaveOn_sqrtLog.2 (show a + b ∈ Ici (0 : ℝ) from hab.le)
-      (show (0 : ℝ) ∈ Ici 0 from le_rfl) (div_nonneg ha hab.le) (div_nonneg hb hab.le)
-      (show a / (a + b) + b / (a + b) = 1 by field_simp)
-    simp only [smul_eq_mul, mul_zero, add_zero, sqrtLog_zero] at h
-    rwa [div_mul_cancel₀ _ hab.ne'] at h
-  have h1 := key hx hy h0
-  have h2 := key hy hx (by linarith)
-  rw [add_comm y x] at h2
-  have : x / (x + y) * sqrtLog (x + y) + y / (x + y) * sqrtLog (x + y) = sqrtLog (x + y) := by
-    field_simp
-  linarith
-
-/-- `ω(c x) ≤ √(max c 1) ω(x)`. -/
-theorem sqrtLog_mul_le {c x : ℝ} (hc : 0 < c) (hx : 0 ≤ x) :
-    sqrtLog (c * x) ≤ √(max c 1) * sqrtLog x := by
-  rcases lt_or_ge c 1 with hc1 | hc1
-  · rw [max_eq_right hc1.le, sqrt_one, one_mul]
-    exact monotone_sqrtLog (by nlinarith)
-  rw [max_eq_left hc1, sqrtLog_eq_gt1 hx, sqrtLog_eq_gt1 (mul_nonneg hc.le hx), ← sqrt_mul hc.le]
-  refine sqrt_le_sqrt ?_
-  -- `g̃(c x) ≤ c g̃(x)`
-  rcases le_or_gt x 1 with hx1 | hx1
-  · rw [gt1, gt1, min_eq_left hx1]
-    rcases le_or_gt (c * x) 1 with hcx | hcx
-    · rw [min_eq_left hcx]
-      rcases eq_or_lt_of_le hx with h0 | h0
-      · rw [← h0]; simp [gl]
-      unfold gl
-      rw [Real.log_mul hc.ne' h0.ne']
-      have := log_nonneg hc1
-      nlinarith [mul_nonneg (mul_nonneg hc.le hx) this]
-    · rw [min_eq_right hcx.le, gl_one]
-      have := le_gl hx hx1
-      nlinarith
-  · rw [gt1, gt1, min_eq_right hx1.le, min_eq_right (by nlinarith), gl_one]
-    linarith
-
 /-- `√(min x 1) ≤ ω(x)`. -/
 theorem sqrt_min_le_sqrtLog {x : ℝ} (hx : 0 ≤ x) : √(min x 1) ≤ sqrtLog x := by
   rw [sqrtLog_eq_gt1 hx, gt1]
   exact sqrt_le_sqrt (le_gl (le_min hx zero_le_one) (min_le_right _ _))
-
-/-- For `0 ≤ η ≤ 1/e`: `ω(η) ≤ √2 √(η log(1/η))`. -/
-theorem sqrtLog_le_sqrt_log_inv {η : ℝ} (h0 : 0 ≤ η) (h1 : η ≤ exp (-1)) :
-    sqrtLog η ≤ √2 * √(η * Real.log (1 / η)) := by
-  have he : exp (-1) < 1 := by rw [← exp_zero]; exact exp_lt_exp.2 (by norm_num)
-  rw [sqrtLog_eq ⟨h0, h1.trans he.le⟩, ← sqrt_mul zero_le_two]
-  refine sqrt_le_sqrt ?_
-  rcases eq_or_lt_of_le h0 with h | h
-  · rw [← h]; simp
-  have hL : 1 ≤ Real.log (1 / η) := by
-    rw [one_div, Real.log_inv, le_neg]
-    calc Real.log η ≤ Real.log (exp (-1)) := Real.log_le_log h h1
-      _ = -1 := log_exp _
-  rw [Real.log_div (exp_ne_zero 1) h.ne', log_exp, one_div, Real.log_inv] at *
-  nlinarith
 
 /-! ### Lemma 3.4 -/
 

@@ -14,12 +14,10 @@ and cap the degrees at `Δ ≥ 10 D` greedily (`BGHKLMM26.Hard.sampledGraph`).
 * `BGHKLMM26.Hard.sparsify_yes` (completeness, Lemma 6.2, in `SparsifyMain.lean`): a cut of weight
   `c` in the dense graph gives Max-Cut value at least `c - C₀/D` with probability `9/10`.
 * `BGHKLMM26.Hard.sparsify_no` (soundness, Lemmas 6.5–6.7, in `SparsifyMain.lean`): if every cut
-  has weight at most
-  `s + λ/2`, `λ = K log² D / D` with `K = 2 (96 C₁² + 16)`, and every cut of weight at least
-  `s - η` is within `C₁ √(η log(1/η)) n` vertices of one of at most `exp(n/A₀)` given cuts, then
-  the Max-Cut value is at most `s + C₀ λ` with probability `9/10`. (The paper's robust inverse
-  gives `C √η` and takes `λ = log² D / D`; with Eldan's `√(η log(1/η))` the scale `K log² D / D`
-  still suffices.)
+  has weight at most `s + λ/2`, `λ = K log D / D` with `K = 2 (96 C₁² + 16)`, and every cut of
+  weight at least `s - η` is within `C₁ √η n` vertices of one of at most `exp(n/A₀)` given cuts,
+  then the Max-Cut value is at most `s + C₀ λ` with probability `9/10`. (With the radius `C₁ √η`
+  of the robust inverse, the multiscale union bound starts at the scale `K log D / D`.)
 
 The hypotheses on the law: each vertex is an end of a sampled edge with probability at most `3/n`,
 and each ordered pair has probability at most `1/(n D²)` (so that few edges repeat).
@@ -52,12 +50,12 @@ noncomputable def lawCut {Ω : Type} [Fintype Ω] {n : ℕ} (dec : Ω → Fin n 
 def sampledGraph (n Δ : ℕ) {Ω : Type} {S : ℕ} (dec : Ω → Fin n × Fin n) (ω : Fin S → Ω) : Graph :=
   graphOf n (keptEdges Δ (List.ofFn fun i ↦ ((dec (ω i)).1.val, (dec (ω i)).2.val)))
 
-/-- The constant `K = 2 (96 C₁² + 16)` of the smallest level `λ = K log² D / D`. -/
+/-- The constant `K = 2 (96 C₁² + 16)` of the smallest level `λ = K log D / D`. -/
 def lamK (C₁ : ℝ) : ℝ := 2 * (96 * C₁ ^ 2 + 16)
 
-/-- The smallest level `λ = K log² D / D` of the multiscale union bound, `K = lamK C₁` for the
+/-- The smallest level `λ = K log D / D` of the multiscale union bound, `K = lamK C₁` for the
 constant `C₁` of the robust inverse. -/
-noncomputable def lam (C₁ : ℝ) (D : ℕ) : ℝ := lamK C₁ * Real.log D ^ 2 / D
+noncomputable def lam (C₁ : ℝ) (D : ℕ) : ℝ := lamK C₁ * Real.log D / D
 
 /-- Appending a pair adds one to the count at each of its ends. -/
 theorem degIn_append_single (kept : List (ℕ × ℕ)) (e : ℕ × ℕ) (a : ℕ) :

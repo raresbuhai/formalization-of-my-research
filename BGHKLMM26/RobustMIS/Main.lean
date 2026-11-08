@@ -1,16 +1,16 @@
 module
 
 public import BGHKLMM26.RobustMIS.Transfer
-public import Mathlib.Analysis.Complex.ExponentialBounds
 
 /-!
 # Robust Majority is Stablest
 
-[BGHKLMM26, Theorem 7.1] with the error of its Remark 7.3 (Eldan's estimate in place of
-Heilman's), `BGHKLMM26.Hard.RobustMIS`, from Corollary `positive-transfer`
-(`BGHKLMM26.RobustMIS.positive_transfer`) and Majority is Stablest
+[BGHKLMM26, Theorem 7.1] with the error `C √η`, `BGHKLMM26.Hard.RobustMIS`, from the Gaussian
+lemma with the error `C √Δ` taken as a hypothesis: `robustMIS_of_sharp (hG : GaussSharp)`, from
+Corollary `positive-transfer` (`BGHKLMM26.RobustMIS.positive_transfer`) and Majority is Stablest
 (`OAI.OptimalMaxCut.MISProof.untruncated_majority_is_stablest`), following the paper's proof of
-Theorem 7.1 with (P4) of `eldan-proof.tex`.
+Theorem 7.1. (`BGHKLMM26.RobustMIS.robustMIS`, in `Final.lean`, discharges `hG` with
+`gaussian_sharp`.)
 
 For `ρ ∈ (-1, 0)`, `t = -ρ` and `h = 2g - 1` with mean `m`: the cut condition is
 `Stab_ρ(h) ≤ (2/π) arcsin ρ + 2η`; with the even and odd parts `Ev`, `Od` of the spectrum,
@@ -18,7 +18,7 @@ For `ρ ∈ (-1, 0)`, `t = -ρ` and `h = 2g - 1` with mean `m`: the cut conditio
 part `Od = Stab_t(h_odd) ≤ (2/π) arcsin t + ξ₁`. Hence `m² ≤ 2η + ξ₁` (so `E g ∈ [1/4, 3/4]`) and
 `Stab_t(h) ≥ (2/π) arcsin t - 2η`, so that, by the quadratic bound on `Γ_t` at `1/2` and
 Sheppard's formula, `D = Γ_t(E g) - Stab_t(g) ≤ C_Γ (2η + ξ₁) + η/2`. Corollary `positive-transfer`
-and the properties of `ω` conclude.
+and `√D ≤ √(2 C_Γ + 1) √η + √(C_Γ ξ₁)` conclude.
 -/
 
 @[expose] public section
@@ -115,26 +115,27 @@ theorem sq_expect_le_even {t : ℝ} (ht : 0 ≤ t) (h : Cube (Fin R) → ℝ) :
 
 /-! ### Theorem 7.1 -/
 
-/-- **Robust Majority is Stablest** [BGHKLMM26, Theorem 7.1 and Remark 7.3]. -/
-theorem robustMIS : BGHKLMM26.Hard.RobustMIS := by
+/-- **Robust Majority is Stablest** [BGHKLMM26, Theorem 7.1], from the Gaussian lemma with the
+error `C √Δ` (`hG : GaussSharp`). -/
+theorem robustMIS_of_sharp (hG : GaussSharp) : BGHKLMM26.Hard.RobustMIS := by
   intro ρ hρ1 hρ0
   obtain ⟨t, rfl⟩ : ∃ t, ρ = -t := ⟨-ρ, by ring⟩
   have ht0 : 0 < t := by linarith
   have ht1 : t < 1 := by linarith
-  obtain ⟨CT, hCT, hT⟩ := positive_transfer ht0 ht1
+  obtain ⟨CT, hCT, hT⟩ := positive_transfer hG ht0 ht1
   obtain ⟨CΓ, hCΓ, hΓ⟩ := Gam_quadratic ht0.le ht1
   have hCm : (0 : ℝ) < 2 * CΓ + 1 := by linarith
-  refine ⟨CT * √(2 * (2 * CΓ + 1)), 1 / 100, by positivity, by norm_num, by norm_num, ?_⟩
+  refine ⟨CT * √(2 * CΓ + 1), 1 / 100, by positivity, by norm_num, by norm_num, ?_⟩
   intro ξ hξ
   -- `ξ₁`: the error allowed in Majority is Stablest.
-  obtain ⟨δ, hδ, hδω⟩ : ∃ δ > 0, ∀ x, |x| < δ → CT * sqrtLog x < ξ / 2 := by
-    have hc := continuous_sqrtLog.continuousAt (x := 0)
+  obtain ⟨δ, hδ, hδω⟩ : ∃ δ > 0, ∀ x, |x| < δ → CT * √x < ξ / 2 := by
+    have hc := Real.continuous_sqrt.continuousAt (x := 0)
     rw [Metric.continuousAt_iff] at hc
     obtain ⟨δ, hδ, hδ'⟩ := hc (ξ / (2 * CT)) (by positivity)
     refine ⟨δ, hδ, fun x hx ↦ ?_⟩
     have h1 := hδ' (x := x) (by simpa [Real.dist_eq] using hx)
-    rw [Real.dist_eq, sqrtLog_zero, sub_zero, abs_of_nonneg (sqrtLog_nonneg x)] at h1
-    calc CT * sqrtLog x < CT * (ξ / (2 * CT)) := mul_lt_mul_of_pos_left h1 hCT
+    rw [Real.dist_eq, Real.sqrt_zero, sub_zero, abs_of_nonneg (Real.sqrt_nonneg x)] at h1
+    calc CT * √x < CT * (ξ / (2 * CT)) := mul_lt_mul_of_pos_left h1 hCT
       _ = ξ / 2 := by field_simp
   set ξ₁ := min (1 / 8 : ℝ) (δ / (2 * (CΓ + 1))) with hξ₁
   have hξ₁0 : 0 < ξ₁ := lt_min (by norm_num) (by positivity)
@@ -210,31 +211,16 @@ theorem robustMIS : BGHKLMM26.Hard.RobustMIS := by
   -- The rate.
   have hη0' : 0 ≤ (2 * CΓ + 1) * η := by positivity
   have hξ₁' : 0 ≤ CΓ * ξ₁ := by positivity
-  have hω : sqrtLog (Gam t (𝔼 x, g x) - stability t g) ≤
-      √(2 * CΓ + 1) * sqrtLog η + sqrtLog (CΓ * ξ₁) := by
-    calc sqrtLog (Gam t (𝔼 x, g x) - stability t g)
-        ≤ sqrtLog ((2 * CΓ + 1) * η + CΓ * ξ₁) := monotone_sqrtLog (by linarith)
-      _ ≤ sqrtLog ((2 * CΓ + 1) * η) + sqrtLog (CΓ * ξ₁) := sqrtLog_add_le hη0' hξ₁'
-      _ ≤ √(max (2 * CΓ + 1) 1) * sqrtLog η + sqrtLog (CΓ * ξ₁) := by
-        gcongr; exact sqrtLog_mul_le hCm hη0
-      _ = √(2 * CΓ + 1) * sqrtLog η + sqrtLog (CΓ * ξ₁) := by
-        rw [max_eq_left (by linarith)]
-  have he1 : (1 / 100 : ℝ) ≤ exp (-1) := by
-    rw [Real.exp_neg, le_inv_comm₀ (by norm_num) (Real.exp_pos 1)]
-    have := Real.exp_one_lt_d9
-    norm_num at this ⊢
-    linarith
-  have hηω := sqrtLog_le_sqrt_log_inv hη0 (hη1.trans he1)
-  have hsmall : CT * sqrtLog (CΓ * ξ₁) < ξ / 2 :=
+  have hω : √(Gam t (𝔼 x, g x) - stability t g) ≤ √(2 * CΓ + 1) * √η + √(CΓ * ξ₁) := by
+    calc √(Gam t (𝔼 x, g x) - stability t g)
+        ≤ √((2 * CΓ + 1) * η + CΓ * ξ₁) := Real.sqrt_le_sqrt (by linarith)
+      _ ≤ √((2 * CΓ + 1) * η) + √(CΓ * ξ₁) := Transfer.sqrt_add_le_add hη0' hξ₁'
+      _ = √(2 * CΓ + 1) * √η + √(CΓ * ξ₁) := by rw [Real.sqrt_mul hCm.le]
+  have hsmall : CT * √(CΓ * ξ₁) < ξ / 2 :=
     hδω _ (by rw [abs_of_nonneg hξ₁']; exact hξ₁δ)
-  have hsq : √(2 * (2 * CΓ + 1)) = √(2 * CΓ + 1) * √2 := by
-    rw [mul_comm 2, Real.sqrt_mul hCm.le]
-  calc ltfDist g ≤ CT * sqrtLog (Gam t (𝔼 x, g x) - stability t g) + ξ / 2 := hdist
-    _ ≤ CT * (√(2 * CΓ + 1) * sqrtLog η + sqrtLog (CΓ * ξ₁)) + ξ / 2 := by gcongr
-    _ = CT * √(2 * CΓ + 1) * sqrtLog η + CT * sqrtLog (CΓ * ξ₁) + ξ / 2 := by ring
-    _ ≤ CT * √(2 * CΓ + 1) * (√2 * √(η * Real.log (1 / η))) + ξ / 2 + ξ / 2 := by
-        gcongr
-    _ = CT * √(2 * (2 * CΓ + 1)) * √(η * Real.log (1 / η)) + ξ := by
-        rw [hsq]; ring
+  calc ltfDist g ≤ CT * √(Gam t (𝔼 x, g x) - stability t g) + ξ / 2 := hdist
+    _ ≤ CT * (√(2 * CΓ + 1) * √η + √(CΓ * ξ₁)) + ξ / 2 := by gcongr
+    _ = CT * √(2 * CΓ + 1) * √η + (CT * √(CΓ * ξ₁) + ξ / 2) := by ring
+    _ ≤ CT * √(2 * CΓ + 1) * √η + ξ := by linarith
 
 end BGHKLMM26.RobustMIS

@@ -7,14 +7,17 @@ public import BGHKLMM26.RobustMIS.MultilinearGauss
 public import BGHKLMM26.RobustMIS.GaussL2
 public import BGHKLMM26.RobustMIS.NoiseLTF
 public import BGHKLMM26.RobustMIS.BackToCube
+public import BGHKLMM26.RobustMIS.SharpDefs
 
 /-!
 # From Gaussian space to the cube
 
 [BGHKLMM26, Lemmas `smoothed-boolean-transfer`, `smoothing-removal` and Corollary
-`positive-transfer`], with Eldan's estimate (changes (P1)–(P3) of `eldan-proof.tex`): for
-`t ∈ (0, 1)`, a table `u : {0,1}^R → [0, 1]` with mean in `[1/4, 3/4]` and small influences is
-within `C ω([Γ_t(E u) - Stab_t(u)]⁺) + o_{τ↓0}(1)` of an LTF.
+`positive-transfer`], from the Gaussian lemma with the error `C √Δ` ([BGHKLMM26, Lemma 7.4]),
+taken as the hypothesis `hG : GaussSharp` (`BGHKLMM26.RobustMIS.GaussSharp`): for `t ∈ (0, 1)`,
+a table `u : {0,1}^R → [0, 1]` with mean in `[1/4, 3/4]` and small influences is within
+`C √(Γ_t(E u) - Stab_t(u)) + o_{τ↓0}(1)` of an LTF (`√x = 0` for `x ≤ 0`, so this is
+`C √([Γ_t(E u) - Stab_t(u)]⁺)`).
 
 **Deviation from the paper's route** (recorded in `README.md`): the paper moves from Gaussian
 space back to the cube through the `L¹` invariance for `q = u - L_λ` (which needs the influences
@@ -54,9 +57,23 @@ theorem stability_sub_stability_mul_le {t r : ℝ} (ht0 : 0 ≤ t) (ht1 : t < 1)
 
 namespace Transfer
 
-theorem sqrtLog_max_zero (x : ℝ) : sqrtLog (max x 0) = sqrtLog x := by
-  unfold sqrtLog clip01
-  rw [max_eq_left (le_max_right x 0)]
+theorem sqrt_max_zero (x : ℝ) : √(max x 0) = √x := by
+  rcases le_total x 0 with hx | hx
+  · rw [max_eq_right hx, Real.sqrt_zero, Real.sqrt_eq_zero_of_nonpos hx]
+  · rw [max_eq_left hx]
+
+/-- `√(x + y) ≤ √x + √y` for `x, y ≥ 0`. -/
+theorem sqrt_add_le_add {x y : ℝ} (hx : 0 ≤ x) (hy : 0 ≤ y) : √(x + y) ≤ √x + √y := by
+  have h1 := Real.sq_sqrt hx
+  have h2 := Real.sq_sqrt hy
+  have h3 := mul_nonneg (Real.sqrt_nonneg x) (Real.sqrt_nonneg y)
+  calc √(x + y) ≤ √((√x + √y) ^ 2) := Real.sqrt_le_sqrt (by nlinarith)
+    _ = √x + √y := Real.sqrt_sq (by positivity)
+
+/-- `√(c x) ≤ √(max c 1) √x` for `c > 0`. -/
+theorem sqrt_mul_le {c x : ℝ} (hc : 0 < c) : √(c * x) ≤ √(max c 1) * √x := by
+  rw [Real.sqrt_mul hc.le]
+  exact mul_le_mul_of_nonneg_right (Real.sqrt_le_sqrt (le_max_left c 1)) (Real.sqrt_nonneg _)
 
 /-- `E|f| ≤ ρ` when `E f² ≤ ρ²` (`|a| ≤ a²/(2ρ) + ρ/2`). -/
 theorem integral_abs_le {α : Type*} [MeasurableSpace α] {μ : Measure α} [IsProbabilityMeasure μ]
@@ -123,16 +140,16 @@ theorem arith_const {E ωδ ω ωD ω4 ωr A CG ξ : ℝ} (hωδ : 0 < ωδ) (hA
       (CG + 2 / ωδ) * A * ωD + (CG + 2 / ωδ) * A * ωr := by ring
   linarith only [h3, h4, h5, hE, hξ]
 
-/-- The rate: `Δ ≤ D⁺ + 4ρ + c(1 - r)` gives `ω(Δ) ≤ ω(D) + ω(4ρ) + √(max c 1) ω(1 - r)`. -/
+/-- The rate: `Δ ≤ D⁺ + 4ρ + c(1 - r)` gives `√Δ ≤ √D + √(4ρ) + √(max c 1) √(1 - r)`. -/
 theorem rate_bound {c r ρ D Δ : ℝ} (hc : 0 < c) (hr1 : r < 1) (hρ0 : 0 ≤ ρ)
     (h : Δ ≤ max D 0 + 4 * ρ + c * (1 - r)) :
-    sqrtLog Δ ≤ sqrtLog D + sqrtLog (4 * ρ) + √(max c 1) * sqrtLog (1 - r) := by
-  have e1 := sqrtLog_add_le (add_nonneg (le_max_right D 0) (by positivity : 0 ≤ 4 * ρ))
+    √Δ ≤ √D + √(4 * ρ) + √(max c 1) * √(1 - r) := by
+  have e1 := sqrt_add_le_add (add_nonneg (le_max_right D 0) (by positivity : 0 ≤ 4 * ρ))
     (mul_nonneg hc.le (by linarith : 0 ≤ 1 - r))
-  have e2 := sqrtLog_add_le (le_max_right D 0) (by positivity : 0 ≤ 4 * ρ)
-  have e3 := sqrtLog_mul_le hc (by linarith : 0 ≤ 1 - r)
-  rw [sqrtLog_max_zero] at e2
-  linarith only [monotone_sqrtLog h, e1, e2, e3]
+  have e2 := sqrt_add_le_add (le_max_right D 0) (by positivity : 0 ≤ 4 * ρ)
+  have e3 := sqrt_mul_le (x := 1 - r) hc
+  rw [sqrt_max_zero] at e2
+  linarith only [Real.sqrt_le_sqrt h, e1, e2, e3]
 
 /-! ### The truncated extension -/
 
@@ -266,24 +283,24 @@ theorem integral_abs_sub_halfInd_le {r ρ : ℝ} (hρ0 : 0 < ρ) (u : Cube (Fin 
 end Transfer
 
 open Transfer in
-/-- **Smoothed transfer** (Lemma `smoothed-boolean-transfer` with (P1)): for `t ∈ (0, 1)` there
-is `C` such that for every `r ∈ (0, 1)`, `ξ, μ > 0` and influences small enough, some LTF `L`,
-constant or regular (unit normal with `max wᵢ² ≤ μ`), has
-`‖T_r u - L‖₁ ≤ C ω(Γ_t(E u) - Stab_t(u)) + C ω(1 - r) + ξ`.
+/-- **Smoothed transfer** (Lemma `smoothed-boolean-transfer`), from the Gaussian lemma
+`hG : GaussSharp`: for `t ∈ (0, 1)` there is `C` such that for every `r ∈ (0, 1)`, `ξ, μ > 0` and
+influences small enough, some LTF `L`, constant or regular (unit normal with `max wᵢ² ≤ μ`), has
+`‖T_r u - L‖₁ ≤ C √(Γ_t(E u) - Stab_t(u)) + C √(1 - r) + ξ`.
 
-Proof (the paper's proof with (P1)), with `C = (C_G + 2/ω(δ₀)) √(max (2/(1-t)) 1)`:
+Proof (the paper's proof), with `C = (C_G + 2/√δ₀) √(max (2/(1-t)) 1)`:
 `P = P_{u,r}`, `F = clamp01 ∘ P`, `ρ_τ = ‖P - F‖₂ → 0` (`truncation`); `|E F - E u| ≤ ρ_τ`
 (`gMean_gaussExt`, `abs_gMean_sub_le`), so `E F ∈ [1/5, 4/5]`;
 `Δ' = Γ_t(E F) - Stab_t(F) ≤ D⁺ + 4ρ_τ + 2(1-r)/(1-t)` (`abs_Gam_sub_le`, `abs_gStab_sub_le`,
 `gStab_gaussExt`, `integral_gaussExt_sq_le`, `stability_sub_stability_mul_le`;
-`Transfer.clamp_mean_deficit`). If `Δ' > δ₀` (constants of `gaussian_main` for `[1/5, 4/5]`),
-take `L` constant: `1 ≤ (ω(D) + ω(4ρ_τ) + √(max (2/(1-t)) 1) ω(1-r)) / ω(δ₀)`
-(`sqrtLog_add_le`, `sqrtLog_mul_le`, `monotone_sqrtLog`). Otherwise `gaussian_main` gives
-`|F̂| ≥ c₀` and `E_γ|F - H| ≤ C_G ω(Δ')` for `H = halfInd w θ`, `w = F̂/|F̂|`, `θ = -Ψ(E F)`;
-`|F̂ᵢ| ≤ r |û({i})| + ρ_τ ≤ √τ + ρ_τ` (`integral_gaussExt_mul_coord`, `abs_hermite1_sub_le`,
-`coefficient_single_sq_le`; `Transfer.coord_sq_le`), so `wᵢ² ≤ ((√τ + ρ_τ)/c₀)²` is small; and
-`cube_ltf_le_gauss` with `‖P - H‖₁ ≤ ‖P - F‖₁ + ‖F - H‖₁ ≤ ρ_τ + C_G ω(Δ')`. -/
-theorem smoothed_transfer {t : ℝ} (ht0 : 0 < t) (ht1 : t < 1) :
+`Transfer.clamp_mean_deficit`). If `Δ' > δ₀` (constants of `hG` for `[1/5, 4/5]`), take `L`
+constant: `1 ≤ (√D + √(4ρ_τ) + √(max (2/(1-t)) 1) √(1-r)) / √δ₀` (`Transfer.rate_bound`).
+Otherwise `hG` gives `|F̂| ≥ c₀` and `E_γ|F - H| ≤ C_G √Δ'` for `H = halfInd w θ`,
+`w = F̂/|F̂|`, `θ = -Ψ(E F)`; `|F̂ᵢ| ≤ r |û({i})| + ρ_τ ≤ √τ + ρ_τ` (`integral_gaussExt_mul_coord`,
+`abs_hermite1_sub_le`, `coefficient_single_sq_le`; `Transfer.coord_sq_le`), so
+`wᵢ² ≤ ((√τ + ρ_τ)/c₀)²` is small; and
+`cube_ltf_le_gauss` with `‖P - H‖₁ ≤ ‖P - F‖₁ + ‖F - H‖₁ ≤ ρ_τ + C_G √Δ'`. -/
+theorem smoothed_transfer (hG : GaussSharp) {t : ℝ} (ht0 : 0 < t) (ht1 : t < 1) :
     ∃ C > 0, ∀ r : ℝ, 0 < r → r < 1 → ∀ ξ > 0, ∀ μ > 0, ∃ τ > 0,
       ∀ (R : ℕ) (u : Cube (Fin R) → ℝ), (∀ x, 0 ≤ u x ∧ u x ≤ 1) →
         1 / 4 ≤ (𝔼 x, u x) → (𝔼 x, u x) ≤ 3 / 4 → (∀ i, influence i u ≤ τ) →
@@ -291,24 +308,23 @@ theorem smoothed_transfer {t : ℝ} (ht0 : 0 < t) (ht1 : t < 1) :
           ((∃ b, ∀ x, L x = b) ∨ ∃ (w : Gs R) (θ : ℝ), ‖w‖ = 1 ∧ (∀ i, w i ^ 2 ≤ μ) ∧
             ∀ x, L x = decide (θ ≤ ∑ i, w i * bitSign (x i))) ∧
           (𝔼 x, |noise r u x - bitVal (L x)|) ≤
-            C * sqrtLog (Gam t (𝔼 x, u x) - stability t u) + C * sqrtLog (1 - r) + ξ := by
+            C * √(Gam t (𝔼 x, u x) - stability t u) + C * √(1 - r) + ξ := by
   obtain ⟨CG, c₀, δ₀, hCG, hc₀, hδ₀, hGM⟩ :=
-    gaussian_main ht0 ht1 (a := 1 / 5) (b := 4 / 5) (by norm_num) (by norm_num) (by norm_num)
+    hG t ht0 ht1 (1 / 5) (4 / 5) (by norm_num) (by norm_num) (by norm_num)
   obtain ⟨A, hA⟩ : ∃ A, A = √(max (2 / (1 - t)) 1) := ⟨_, rfl⟩
   have hA1 : 1 ≤ A := by rw [hA]; exact Real.one_le_sqrt.2 (le_max_right _ _)
-  have hωδ : 0 < sqrtLog δ₀ :=
-    (Real.sqrt_pos.2 (lt_min hδ₀ one_pos)).trans_le (sqrt_min_le_sqrtLog hδ₀.le)
-  have hC : 0 < (CG + 2 / sqrtLog δ₀) * A := by positivity
-  refine ⟨(CG + 2 / sqrtLog δ₀) * A, hC, fun r hr0 hr1 ξ hξ μ hμ ↦ ?_⟩
-  -- continuity of `ω` at `0`
+  have hωδ : 0 < √δ₀ := Real.sqrt_pos.2 hδ₀
+  have hC : 0 < (CG + 2 / √δ₀) * A := by positivity
+  refine ⟨(CG + 2 / √δ₀) * A, hC, fun r hr0 hr1 ξ hξ μ hμ ↦ ?_⟩
+  -- continuity of `√` at `0`
   obtain ⟨η, hη, hηω⟩ : ∃ η > 0, ∀ x, |x| < η →
-      sqrtLog x < min (sqrtLog δ₀ / 2) (ξ / (4 * CG)) := by
-    have hc := continuous_sqrtLog.continuousAt (x := 0)
+      √x < min (√δ₀ / 2) (ξ / (4 * CG)) := by
+    have hc := Real.continuous_sqrt.continuousAt (x := 0)
     rw [Metric.continuousAt_iff] at hc
     obtain ⟨η, hη, hη'⟩ := hc _ (lt_min (half_pos hωδ) (by positivity : 0 < ξ / (4 * CG)))
     refine ⟨η, hη, fun x hx ↦ ?_⟩
     have h1 := hη' (x := x) (by simpa [Real.dist_eq] using hx)
-    rwa [Real.dist_eq, sqrtLog_zero, sub_zero, abs_of_nonneg (sqrtLog_nonneg x)] at h1
+    rwa [Real.dist_eq, Real.sqrt_zero, sub_zero, abs_of_nonneg (Real.sqrt_nonneg x)] at h1
   obtain ⟨τ₂, hτ₂, hBC⟩ := cube_ltf_le_gauss hr0 hr1 (s := ξ / 8) (ε := ξ / 8) (by positivity)
     (by positivity)
   obtain ⟨μ', hμ'⟩ : ∃ μ', μ' = min μ τ₂ := ⟨_, rfl⟩
@@ -349,7 +365,7 @@ theorem smoothed_transfer {t : ℝ} (ht0 : 0 < t) (ht1 : t < 1) :
     linarith [(abs_le.1 hmean).2]
   have hω := rate_bound (div_pos two_pos (by linarith : 0 < 1 - t)) hr1 hρ0.le hdef
   rw [← hA] at hω
-  have h4ρ : sqrtLog (4 * ρ) < min (sqrtLog δ₀ / 2) (ξ / (4 * CG)) :=
+  have h4ρ : √(4 * ρ) < min (√δ₀ / 2) (ξ / (4 * CG)) :=
     hηω _ (by rw [abs_of_pos (by positivity)]; linarith)
   have hGMF := hGM R _ hFc.measurable hF01 hmF1 hmF2
   by_cases hsmall : gDef t (fun G ↦ clamp01 (gaussExt r u G)) ≤ δ₀
@@ -368,7 +384,8 @@ theorem smoothed_transfer {t : ℝ} (ht0 : 0 < t) (ht1 : t < 1) :
     have hwτ : ∀ i, w i ^ 2 ≤ τ₂ := fun i ↦ (hcoord i).trans (hμ' ▸ min_le_right _ _)
     refine ⟨fun x ↦ decide (θ ≤ ∑ i, w i * bitSign (x i)),
       Or.inr ⟨w, θ, hwn, hwμ, fun x ↦ rfl⟩, ?_⟩
-    exact arith_regular hCG hA1 (div_pos two_pos hωδ).le (sqrtLog_nonneg _) (sqrtLog_nonneg _)
+    exact arith_regular hCG hA1 (div_pos two_pos hωδ).le (Real.sqrt_nonneg _)
+      (Real.sqrt_nonneg _)
       (hBC R u h01 hinf2 w θ hwn hwτ) (integral_abs_sub_halfInd_le hρ0 u hPF2 w θ) hL1 hω
       (h4ρ.trans_le (min_le_right _ _)) hρξ hξ.le
   · -- a constant
@@ -380,27 +397,28 @@ theorem smoothed_transfer {t : ℝ} (ht0 : 0 < t) (ht1 : t < 1) :
             simp only [bitVal, Bool.false_eq_true, ite_false, sub_zero]
             rw [abs_of_nonneg (hT x).1]; exact (hT x).2
         _ = 1 := by simp
-    exact arith_const hωδ hA1 hCG (sqrtLog_nonneg _) (sqrtLog_nonneg _) hξ hle1
-      (monotone_sqrtLog (not_le.1 hsmall).le) hω (h4ρ.trans_le (min_le_left _ _))
+    exact arith_const hωδ hA1 hCG (Real.sqrt_nonneg _) (Real.sqrt_nonneg _) hξ hle1
+      (Real.sqrt_le_sqrt (not_le.1 hsmall).le) hω (h4ρ.trans_le (min_le_left _ _))
 
 
-/-- **Corollary `positive-transfer`** (with (P3)): `dist(u, ℒ_R) ≤ C ω([Γ_t(E u) - Stab_t(u)]⁺) +
-o_{τ↓0}(1)` for `u : {0,1}^R → [0,1]` with `E u ∈ [1/4, 3/4]`. -/
-theorem positive_transfer {t : ℝ} (ht0 : 0 < t) (ht1 : t < 1) :
+/-- **Corollary `positive-transfer`**, from the Gaussian lemma `hG : GaussSharp`:
+`dist(u, ℒ_R) ≤ C √([Γ_t(E u) - Stab_t(u)]⁺) + o_{τ↓0}(1)` for `u : {0,1}^R → [0,1]` with
+`E u ∈ [1/4, 3/4]`. -/
+theorem positive_transfer (hG : GaussSharp) {t : ℝ} (ht0 : 0 < t) (ht1 : t < 1) :
     ∃ C > 0, ∀ ξ > 0, ∃ τ > 0, ∀ (R : ℕ) (u : Cube (Fin R) → ℝ), (∀ x, 0 ≤ u x ∧ u x ≤ 1) →
       1 / 4 ≤ (𝔼 x, u x) → (𝔼 x, u x) ≤ 3 / 4 → (∀ i, influence i u ≤ τ) →
-        ltfDist u ≤ C * sqrtLog (Gam t (𝔼 x, u x) - stability t u) + ξ := by
-  obtain ⟨C, hC, hST⟩ := smoothed_transfer ht0 ht1
+        ltfDist u ≤ C * √(Gam t (𝔼 x, u x) - stability t u) + ξ := by
+  obtain ⟨C, hC, hST⟩ := smoothed_transfer hG ht0 ht1
   refine ⟨C, hC, fun ξ hξ ↦ ?_⟩
   -- The smoothing `r = 1 - κ`, close enough to `1`.
-  obtain ⟨δ, hδ, hδω⟩ : ∃ δ > 0, ∀ x, |x| < δ → C * sqrtLog x < ξ / 4 := by
-    have hc := continuous_sqrtLog.continuousAt (x := 0)
+  obtain ⟨δ, hδ, hδω⟩ : ∃ δ > 0, ∀ x, |x| < δ → C * √x < ξ / 4 := by
+    have hc := Real.continuous_sqrt.continuousAt (x := 0)
     rw [Metric.continuousAt_iff] at hc
     obtain ⟨δ, hδ, hδ'⟩ := hc (ξ / (4 * C)) (by positivity)
     refine ⟨δ, hδ, fun x hx ↦ ?_⟩
     have h1 := hδ' (x := x) (by simpa [Real.dist_eq] using hx)
-    rw [Real.dist_eq, sqrtLog_zero, sub_zero, abs_of_nonneg (sqrtLog_nonneg x)] at h1
-    calc C * sqrtLog x < C * (ξ / (4 * C)) := mul_lt_mul_of_pos_left h1 hC
+    rw [Real.dist_eq, Real.sqrt_zero, sub_zero, abs_of_nonneg (Real.sqrt_nonneg x)] at h1
+    calc C * √x < C * (ξ / (4 * C)) := mul_lt_mul_of_pos_left h1 hC
       _ = ξ / 4 := by field_simp
   set κ : ℝ := min (min (δ / 2) ((ξ / 32) ^ 3)) (1 / 2) with hκ
   have hκ0 : 0 < κ := lt_min (lt_min (by positivity) (by positivity)) (by norm_num)
@@ -409,7 +427,7 @@ theorem positive_transfer {t : ℝ} (ht0 : 0 < t) (ht1 : t < 1) :
   have hκ2 : κ ≤ 1 / 2 := min_le_right _ _
   have hr0 : 0 < 1 - κ := by linarith
   have hr1 : 1 - κ < 1 := by linarith
-  have hω : C * sqrtLog (1 - (1 - κ)) < ξ / 4 := by
+  have hω : C * √(1 - (1 - κ)) < ξ / 4 := by
     rw [sub_sub_cancel]; exact hδω κ (by rw [abs_of_pos hκ0]; exact hκδ)
   have hpow : (1 - (1 - κ)) ^ (1 / 3 : ℝ) ≤ ξ / 32 := by
     rw [sub_sub_cancel]
@@ -443,8 +461,8 @@ theorem positive_transfer {t : ℝ} (ht0 : 0 < t) (ht1 : t < 1) :
     _ ≤ (𝔼 x, |noise (1 - κ) u x - bitVal (L x)|) +
           2 * 𝔼 x, |bitVal (L x) - noise (1 - κ) (fun y ↦ bitVal (L y)) x| :=
         smoothing_removal hr0.le hr1.le u h01 L
-    _ ≤ (C * sqrtLog (Gam t (𝔼 x, u x) - stability t u) + C * sqrtLog (1 - (1 - κ)) + ξ / 4) +
+    _ ≤ (C * √(Gam t (𝔼 x, u x) - stability t u) + C * √(1 - (1 - κ)) + ξ / 4) +
           2 * (4 * (1 - (1 - κ)) ^ (1 / 3 : ℝ) + ξ / 8) := by gcongr
-    _ ≤ C * sqrtLog (Gam t (𝔼 x, u x) - stability t u) + ξ := by linarith
+    _ ≤ C * √(Gam t (𝔼 x, u x) - stability t u) + ξ := by linarith
 
 end BGHKLMM26.RobustMIS

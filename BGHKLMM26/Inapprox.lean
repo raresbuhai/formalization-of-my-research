@@ -34,7 +34,7 @@ of expected size at least `α opt` with `α c > s` solves the gap problem `maxCu
   `(1 - p)^m` (`BGHKLMM26.Inapprox.probability_not_prog`), below `1/3` for `m` large depending on
   `d`. The program is strict PPT by complexitylib's repetition and sampling certificates.
 * **Constants.** With `C₂` the constant of Theorem 1.2 and `B = max C₂ 1`, the ratio
-  `α_GW + (4 B / c*) log² d / d` times `c* - C₂ / d` exceeds `s* + C₂ log² d / d` once
+  `α_GW + (4 B / c*) log d / d` times `c* - C₂ / d` exceeds `s* + C₂ log d / d` once
   `d ≥ 3` and `d > 4 B / c*`, since `α_GW c* = s*`.
 -/
 
@@ -664,17 +664,17 @@ theorem one_lt_log_three : 1 < Real.log 3 := by
 
 open Cslib.Complexity in
 /-- **Corollary 1.3 from Theorem 1.2**: with `C₂` the constant of Theorem 1.2 and
-`B = max C₂ 1`, an algorithm reaching `α_GW + (4 B / c*) log² d / d` on graphs of maximum degree
+`B = max C₂ 1`, an algorithm reaching `α_GW + (4 B / c*) log d / d` on graphs of maximum degree
 `d ≥ max(d₂, 3, 4 B / c* + 1)` solves Theorem 1.2's gap problem, which puts `NP` in `BPP`. -/
 theorem of_hardness
     (h : ∃ (C : ℝ) (d₀ : ℕ), ∀ d : ℕ, d₀ ≤ d → ∀ ρ : ℝ, IsGWMinimizer ρ →
-      maxCutGap d ((1 - ρ) / 2 - C / d) (Real.arccos ρ / Real.pi + C * Real.log d ^ 2 / d) ∈
+      maxCutGap d ((1 - ρ) / 2 - C / d) (Real.arccos ρ / Real.pi + C * Real.log d / d) ∈
         PromiseBPP encGraph →
       ∀ (α : Type) (enc : α ↪ List Bool), NP enc ⊆ BPP enc) :
     ∃ (C : ℝ) (d₀ : ℕ), ∀ d : ℕ, d₀ ≤ d →
       ∀ (A : Instance × List Bool → List Bool) (k : ℕ), RunsInTime A (fun N ↦ (N + 2) ^ k) →
       (∀ I : Instance, Valid I → IsMaxCutInstance I → MaxDegreeLE I d →
-        (alphaGW + C * Real.log d ^ 2 / d) * opt I ≤
+        (alphaGW + C * Real.log d / d) * opt I ≤
           coinMean (((encInstance I).length + 2) ^ k) fun r ↦ outputWeight I (A (I, r))) →
       ∀ (α : Type) (enc : α ↪ List Bool), NP enc ⊆ BPP enc := by
   obtain ⟨C₂, d₂, h⟩ := h
@@ -697,10 +697,8 @@ theorem of_hardness
     have h2 : ((⌈4 * B / cs⌉₊ : ℕ) : ℝ) + 1 ≤ d := by exact_mod_cast h1
     linarith [Nat.le_ceil (4 * B / cs)]
   have hd0 : (0 : ℝ) < d := by linarith
-  set Lg := Real.log d ^ 2
-  have hL : 1 ≤ Lg := by
-    have : 1 < Real.log d := one_lt_log_three.trans_le (Real.log_le_log (by norm_num) hd3)
-    exact one_le_pow₀ this.le
+  set Lg := Real.log d
+  have hL : 1 ≤ Lg := (one_lt_log_three.trans_le (Real.log_le_log (by norm_num) hd3)).le
   -- `u = B / d` and `v = 4 B / (c* d) < 1`
   set u := B / d
   set v := 4 * B / cs / d

@@ -9,10 +9,11 @@ public import Mathlib.Analysis.Complex.ExponentialBounds
 # Eldan's robust Borell estimate: the Gaussian lemma
 
 Theorem A(c), (d) and Corollary B of `eldan-proof.tex`: Lemma `gaussian-main` of [BGHKLMM26]
-(`robust-MIS-main.tex`) with `√Δ` replaced by `ω(Δ) = √(Δ log(e/Δ))` (`sqrtLog`). It replaces the
-paper's proof of Lemma `gaussian-main` entirely: Mossel–Neeman's functional Borell and robust
-Borell theorems, Heilman's theorems, Lemma `gaussian-facts` (a), (b), (e), (f) and the epigraph
-construction are not needed.
+(`robust-MIS-main.tex`) with `√Δ` replaced by `ω(Δ) = √(Δ log(e/Δ))` (`sqrtLog`). It is the first
+step of the Gaussian lemma with the error `C √Δ` (`BGHKLMM26.RobustMIS.gaussian_sharp`,
+`Sharp.lean`), which uses it to put `F` close to the halfspace. Mossel–Neeman's functional Borell
+and robust Borell theorems, Heilman's theorems, Lemma `gaussian-facts` (a), (b), (e), (f) and the
+epigraph construction are not needed.
 
 * `theoremA_c`: `‖f - 𝟙_H‖₁ ≤ 2 (λ c₁)^{-1/2} ω(Δ)` for the halfspace `H` of measure `m` with normal
   `F̂/|F̂|`. Proof (§9.2): if `Δ > c₁`, the right side is `≥ 4`; if `Δ = 0` then `ε = 0`

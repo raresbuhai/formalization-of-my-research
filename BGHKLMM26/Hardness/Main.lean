@@ -11,9 +11,9 @@ public import Complexity.Computability.Probabilistic.Sampling
 /-!
 # Theorem 1.2, assuming the robust Majority is Stablest theorem
 
-`BGHKLMM26.Hard.maxCut_hardness_of_robustMIS`: Theorem 1.2 of [BGHKLMM26] (with the paper's
-`log² d`) from
-`BGHKLMM26.Hard.RobustMIS` ([BGHKLMM26, Theorem 7.1] with Eldan's estimate).
+`BGHKLMM26.Hard.maxCut_hardness_of_robustMIS`: Theorem 1.2 of [BGHKLMM26], with `log d / d` in
+place of the paper's `log² d / d`, from `BGHKLMM26.Hard.RobustMIS` ([BGHKLMM26, Theorem 7.1], with
+the error `C √η`).
 
 The reduction (`BGHKLMM26.Hard.redProg`) samples `n D` edges of the KKMO graph with correlation
 `ρ_d`, a dyadic rational close to `ρ*`, and caps the degrees at `d`, `D = ⌊d/10⌋`. A yes-instance
@@ -74,8 +74,7 @@ def SparsifyNoAt (C₁ η₀ C₀ A₀ : ℝ) (D n₀ : ℕ) : Prop :=
     ∀ s : ℝ, 0 ≤ s → s ≤ 1 → (∀ f, lawCut dec f ≤ s + lam C₁ D / 2) →
     ∀ 𝓛 : Finset (Fin n → Bool), (𝓛.card : ℝ) ≤ Real.exp (n / A₀) →
     (∀ (f : Fin n → Bool) (η : ℝ), lam C₁ D ≤ η → η ≤ η₀ → s - η ≤ lawCut dec f →
-      ∃ L ∈ 𝓛, ((univ.filter fun a ↦ f a ≠ L a).card : ℝ) ≤
-        C₁ * Real.sqrt (η * Real.log (1 / η)) * n) →
+      ∃ L ∈ 𝓛, ((univ.filter fun a ↦ f a ≠ L a).card : ℝ) ≤ C₁ * Real.sqrt η * n) →
     9 / 10 ≤ frac fun ω : Fin (n * D) → Ω ↦
       maxCutValue (sampledGraph n Δ dec ω) ≤ s + C₀ * lam C₁ D
 
@@ -175,8 +174,7 @@ theorem no_case {P : Prm} {G : UGInstance} (hG : GoodI P.R G) (hq : P.q ≤ 2 ^ 
     (hsnd : ∀ f', kkmoCut P.rho P.R G.2.2.2 f' ≤ s + lam C₁ P.D / 4)
     (hrob : ∀ (f' : ℕ → Cube (Fin P.R) → Bool) (η : ℝ), lam C₁ P.D ≤ η → η ≤ η₀ →
       s - η - lam C₁ P.D / 4 ≤ kkmoCut P.rho P.R G.2.2.2 f' →
-      (∑ v ∈ range G.2.1, ltfDist (fun x ↦ bitVal (f' v x))) / G.2.1 ≤
-        C₁ * Real.sqrt (η * Real.log (1 / η)))
+      (∑ v ∈ range G.2.1, ltfDist (fun x ↦ bitVal (f' v x))) / G.2.1 ≤ C₁ * Real.sqrt η)
     {c s' : ℝ} (hs' : s + C₀ * lam C₁ P.D ≤ s') (hs'0 : 0 ≤ s') (hsc : s' < c) :
     9 / 10 ≤ ((ProbComp.eval (redProg P G)).toOuterMeasure (maxCutGap P.Δ c s').no).toReal := by
   by_cases hok : P.ok G = true
@@ -198,7 +196,7 @@ theorem no_case {P : Prm} {G : UGInstance} (hG : GoodI P.R G) (hq : P.q ≤ 2 ^ 
   have hcover : ∀ (f : Fin (P.nVert G) → Bool) (η : ℝ), lam C₁ P.D ≤ η → η ≤ η₀ →
       s - η ≤ lawCut (dec hG hok) f →
       ∃ L ∈ ltfCuts P.R G.2.1 hn, ((univ.filter fun a ↦ f a ≠ L a).card : ℝ) ≤
-        C₁ * Real.sqrt (η * Real.log (1 / η)) * P.nVert G := by
+        C₁ * Real.sqrt η * P.nVert G := by
     intro f η hη1 hη2 hcut
     have hk : s - η - lam C₁ P.D / 4 ≤
         kkmoCut P.rho P.R G.2.2.2 (fun v y ↦ liftCut f (vtx v y)) := by
@@ -260,9 +258,9 @@ theorem lam_pos (C₁ : ℝ) {D : ℕ} (hD : 3 ≤ D) : 0 < lam C₁ D :=
 theorem inv_le_lam (C₁ : ℝ) {D : ℕ} (hD : 3 ≤ D) : 1 / (D : ℝ) ≤ lam C₁ D :=
   one_div_le_lam (by exact_mod_cast (show 0 < D by omega)) (one_lt_log_of_three_le hD).le
 
-/-- `λ_D ≤ 20 K log² d / d` for `D = ⌊d/10⌋`. -/
+/-- `λ_D ≤ 20 K log d / d` for `D = ⌊d/10⌋`. -/
 theorem lam_le (C₁ : ℝ) {d : ℕ} (hd : 30 ≤ d) :
-    lam C₁ (d / 10) ≤ 20 * lamK C₁ * Real.log d ^ 2 / d := by
+    lam C₁ (d / 10) ≤ 20 * lamK C₁ * Real.log d / d := by
   have hDr : (0 : ℝ) < (d / 10 : ℕ) := by exact_mod_cast (show 0 < d / 10 by omega)
   have hdr : (0 : ℝ) < d := by exact_mod_cast (show 0 < d by omega)
   have hDd : ((d / 10 : ℕ) : ℝ) ≤ d := by exact_mod_cast Nat.div_le_self d 10
@@ -270,16 +268,14 @@ theorem lam_le (C₁ : ℝ) {d : ℕ} (hd : 30 ≤ d) :
     have : d ≤ 20 * (d / 10) := by omega
     exact_mod_cast this
   have hlog : Real.log (d / 10 : ℕ) ≤ Real.log d := Real.log_le_log hDr hDd
-  have hlog0 : 0 ≤ Real.log (d / 10 : ℕ) :=
-    Real.log_nonneg (by exact_mod_cast (show 1 ≤ d / 10 by omega))
+  have hlogd : 0 ≤ Real.log d := Real.log_nonneg (by exact_mod_cast (show 1 ≤ d by omega))
   have hK : 0 ≤ lamK C₁ := zero_le_one.trans (one_le_lamK C₁)
   unfold lam
   rw [div_le_div_iff₀ hDr hdr]
-  have h3 : Real.log (d / 10 : ℕ) ^ 2 ≤ Real.log d ^ 2 := pow_le_pow_left₀ hlog0 hlog 2
-  calc lamK C₁ * Real.log (d / 10 : ℕ) ^ 2 * d
-      ≤ lamK C₁ * Real.log d ^ 2 * (20 * (d / 10 : ℕ)) :=
-        mul_le_mul (mul_le_mul_of_nonneg_left h3 hK) h20 hdr.le (by positivity)
-    _ = 20 * lamK C₁ * Real.log d ^ 2 * (d / 10 : ℕ) := by ring
+  calc lamK C₁ * Real.log (d / 10 : ℕ) * d
+      ≤ lamK C₁ * Real.log d * (20 * (d / 10 : ℕ)) :=
+        mul_le_mul (mul_le_mul_of_nonneg_left hlog hK) h20 hdr.le (by positivity)
+    _ = 20 * lamK C₁ * Real.log d * (d / 10 : ℕ) := by ring
 
 theorem inv_div_ten_le {d : ℕ} (hd : 30 ≤ d) : 1 / ((d / 10 : ℕ) : ℝ) ≤ 20 / d := by
   have hDr : (0 : ℝ) < (d / 10 : ℕ) := by exact_mod_cast (show 0 < d / 10 by omega)
@@ -339,35 +335,29 @@ theorem ltf_count_le_exp {R : ℕ} {A : ℝ} (hA : 0 < A) (h : A * ((R : ℝ) + 
         linarith
 
 /-- **The robust inverse at a nearby correlation**: from the robust inverse of soundness at `ρ`,
-with `ξ = φ(λ)`, `φ(z) = √(z log(1/z))`, the cuts at `ρ'` with `|Cut_ρ' - Cut_ρ| ≤ λ/8` satisfy
-the bound of `BGHKLMM26.Hard.no_case` with `C₁ = 2C + 1`. -/
+with `ξ = √λ`, the cuts at `ρ'` with `|Cut_ρ' - Cut_ρ| ≤ λ/8` satisfy the bound of
+`BGHKLMM26.Hard.no_case` with `C₁ = 2C + 1`. -/
 theorem hrob_of_robust {R : ℕ} {G : UGInstance} {ρ ρ' CK ηK lam' η₀' : ℝ}
-    (hlam0 : 0 < lam') (hη₀ : η₀' ≤ ηK / 2) (hη₀' : η₀' ≤ 1 / 6) (hCK : 0 ≤ CK)
+    (hlam0 : 0 < lam') (hη₀ : η₀' ≤ ηK / 2) (hCK : 0 ≤ CK)
     (hrob : ∀ (f : ℕ → Cube (Fin R) → Bool) (η : ℝ), 0 ≤ η → η ≤ ηK →
         Real.arccos ρ / Real.pi - η ≤ kkmoCut ρ R G.2.2.2 f →
         (∑ v ∈ range G.2.1, ltfDist (fun x ↦ bitVal (f v x))) / G.2.1 ≤
-          CK * Real.sqrt (η * Real.log (1 / η)) + Real.sqrt (lam' * Real.log (1 / lam')))
+          CK * Real.sqrt η + Real.sqrt lam')
     (hlip : ∀ f, |kkmoCut ρ' R G.2.2.2 f - kkmoCut ρ R G.2.2.2 f| ≤ lam' / 8) :
     ∀ (f : ℕ → Cube (Fin R) → Bool) (η : ℝ), lam' ≤ η → η ≤ η₀' →
       Real.arccos ρ / Real.pi - η - lam' / 4 ≤ kkmoCut ρ' R G.2.2.2 f →
       (∑ v ∈ range G.2.1, ltfDist (fun x ↦ bitVal (f v x))) / G.2.1 ≤
-        (2 * CK + 1) * Real.sqrt (η * Real.log (1 / η)) := by
+        (2 * CK + 1) * Real.sqrt η := by
   intro f η hη1 hη2 hcut
   have hη0 : 0 ≤ η := hlam0.le.trans hη1
   have h' := hrob f (η + 3 * lam' / 8) (by positivity) (by linarith)
     (by linarith [(abs_le.1 (hlip f)).2])
-  simp only [← KKMORobust.negMulLog_eq_mul_log_one_div] at h' ⊢
-  have hm1 : Real.negMulLog (η + 3 * lam' / 8) ≤ Real.negMulLog (η + η) :=
-    KKMORobust.negMulLog_le_negMulLog (by positivity) (by linarith) (by linarith)
-  have hm2 : √(Real.negMulLog (η + η)) ≤ √(Real.negMulLog η) + √(Real.negMulLog η) :=
-    KKMORobust.sqrt_negMulLog_add_le hη0 hη0 (by linarith)
-  have hm3 : Real.negMulLog lam' ≤ Real.negMulLog η :=
-    KKMORobust.negMulLog_le_negMulLog hlam0.le hη1 (by linarith)
-  have hs1 := Real.sqrt_le_sqrt hm1
-  have hs3 := Real.sqrt_le_sqrt hm3
-  have : CK * √(Real.negMulLog (η + 3 * lam' / 8)) ≤ CK * (2 * √(Real.negMulLog η)) :=
+  have hs1 : √(η + 3 * lam' / 8) ≤ √(η + η) := Real.sqrt_le_sqrt (by linarith)
+  have hs2 : √(η + η) ≤ √η + √η := KKMORobust.sqrt_add_le_add_sqrt' hη0 hη0
+  have hs3 : √lam' ≤ √η := Real.sqrt_le_sqrt hη1
+  have : CK * √(η + 3 * lam' / 8) ≤ CK * (2 * √η) :=
     mul_le_mul_of_nonneg_left (by linarith) hCK
-  nlinarith
+  linarith
 
 /-! ### Theorem 1.2 -/
 
@@ -379,16 +369,14 @@ theorem gap_pos : Real.arccos GW.rhoStar / Real.pi < (1 - GW.rhoStar) / 2 := by
   rwa [div_lt_one h1] at h2
 
 theorem eventually_small (C γ K : ℝ) (hγ : 0 < γ) :
-    ∃ d₁ : ℕ, ∀ d : ℕ, d₁ ≤ d → C * (Real.log d ^ 2 + 1) / d < γ ∧
-      K * Real.log d ^ 2 / d < 1 / 7 := by
-  have h1 := Real.tendsto_pow_log_div_mul_add_atTop 1 0 2 one_ne_zero
-  have h2 : Filter.Tendsto (fun x : ℝ ↦ Real.log x ^ 2 / x + 1 / x) Filter.atTop (nhds 0) := by
-    have h1' : Filter.Tendsto (fun x : ℝ ↦ Real.log x ^ 2 / x) Filter.atTop (nhds 0) := by
-      simpa using h1
+    ∃ d₁ : ℕ, ∀ d : ℕ, d₁ ≤ d → C * (Real.log d + 1) / d < γ ∧
+      K * Real.log d / d < 1 / 7 := by
+  have h1 := Real.tendsto_pow_log_div_mul_add_atTop 1 0 1 one_ne_zero
+  have h1' : Filter.Tendsto (fun x : ℝ ↦ Real.log x / x) Filter.atTop (nhds 0) := by
+    simpa using h1
+  have h2 : Filter.Tendsto (fun x : ℝ ↦ Real.log x / x + 1 / x) Filter.atTop (nhds 0) := by
     simpa using h1'.add (tendsto_inv_atTop_zero.congr fun x ↦ (one_div x).symm)
   have h3 := (h2.comp tendsto_natCast_atTop_atTop)
-  have h1' : Filter.Tendsto (fun x : ℝ ↦ Real.log x ^ 2 / x) Filter.atTop (nhds 0) := by
-    simpa using h1
   have h4 := (h1'.comp tendsto_natCast_atTop_atTop)
   have e3 := Filter.eventually_atTop.1 ((h3.const_mul (|C| + 1)).eventually
     (gt_mem_nhds (show (|C| + 1) * 0 < γ by simpa using hγ)))
@@ -401,13 +389,13 @@ theorem eventually_small (C γ K : ℝ) (hγ : 0 < γ) :
     simp only [Function.comp_apply] at this
     have hd0 : (0 : ℝ) < d := by
       exact_mod_cast (show 0 < d by have := le_of_max_le_right hd; omega)
-    have hlog : 0 ≤ Real.log d ^ 2 / d := by
+    have hlog : 0 ≤ Real.log d / d := by
       have : 0 ≤ Real.log d := Real.log_nonneg (by exact_mod_cast
         (show 1 ≤ d by have := le_of_max_le_right hd; omega))
       positivity
-    have hC : C * (Real.log d ^ 2 + 1) / d ≤ (|C| + 1) * (Real.log d ^ 2 / d + 1 / d) := by
-      rw [show C * (Real.log d ^ 2 + 1) / d = C * (Real.log d ^ 2 / d + 1 / d) by ring]
-      have hpos : 0 ≤ Real.log d ^ 2 / d + 1 / d := by positivity
+    have hC : C * (Real.log d + 1) / d ≤ (|C| + 1) * (Real.log d / d + 1 / d) := by
+      rw [show C * (Real.log d + 1) / d = C * (Real.log d / d + 1 / d) by ring]
+      have hpos : 0 ≤ Real.log d / d + 1 / d := by positivity
       nlinarith [le_abs_self C]
     linarith
   · have := hb d (le_of_max_le_right (le_of_max_le_left hd))
@@ -467,28 +455,28 @@ theorem yes_arith {C C₀y ε ρs ρd : ℝ} {d D : ℕ} (hdr : (0 : ℝ) < d) (
   rw [e6]
   linarith only [hρ, hε, h1, e4, e5, hu0]
 
-/-- The soundness arithmetic: `s + C₀ λ ≤ s + C log² d / d < c* - C/d`. -/
+/-- The soundness arithmetic: `s + C₀ λ ≤ s + C log d / d < c* - C/d`. -/
 theorem no_arith {C C₀n K lamD ss cs : ℝ} {d : ℕ} (hdr : (0 : ℝ) < d) (hC₀n : 0 ≤ C₀n)
-    (hC : K * C₀n ≤ C) (hlog0 : 0 ≤ Real.log d ^ 2) (hlamle : lamD ≤ K * Real.log d ^ 2 / d)
-    (hsmall : C * (Real.log d ^ 2 + 1) / d < cs - ss) :
-    ss + C₀n * lamD ≤ ss + C * Real.log d ^ 2 / d ∧
-      ss + C * Real.log d ^ 2 / d < cs - C / d := by
+    (hC : K * C₀n ≤ C) (hlog0 : 0 ≤ Real.log d) (hlamle : lamD ≤ K * Real.log d / d)
+    (hsmall : C * (Real.log d + 1) / d < cs - ss) :
+    ss + C₀n * lamD ≤ ss + C * Real.log d / d ∧
+      ss + C * Real.log d / d < cs - C / d := by
   constructor
-  · have h1 : C₀n * lamD ≤ C₀n * (K * Real.log d ^ 2 / d) :=
+  · have h1 : C₀n * lamD ≤ C₀n * (K * Real.log d / d) :=
       mul_le_mul_of_nonneg_left hlamle hC₀n
-    have h2 : C₀n * (K * Real.log d ^ 2 / d) ≤ C * Real.log d ^ 2 / d := by
-      rw [show C₀n * (K * Real.log d ^ 2 / d) = (K * C₀n) * Real.log d ^ 2 / d by ring]
+    have h2 : C₀n * (K * Real.log d / d) ≤ C * Real.log d / d := by
+      rw [show C₀n * (K * Real.log d / d) = (K * C₀n) * Real.log d / d by ring]
       exact div_le_div_of_nonneg_right (mul_le_mul_of_nonneg_right hC hlog0) hdr.le
     linarith only [h1, h2]
-  · have : C * (Real.log d ^ 2 + 1) / d = C * Real.log d ^ 2 / d + C / d := by ring
+  · have : C * (Real.log d + 1) / d = C * Real.log d / d + C / d := by ring
     rw [this] at hsmall
     linarith only [hsmall]
 
 /-- The facts about `d`, `D = ⌊d/10⌋` and `λ = λ_D` used in the proof. -/
 theorem d_facts (C₁ : ℝ) {d D₀n : ℕ} (hd30 : 30 ≤ d) (hdD : 10 * D₀n ≤ d)
-    (hlam7 : 20 * lamK C₁ * Real.log d ^ 2 / d < 1 / 7) :
+    (hlam7 : 20 * lamK C₁ * Real.log d / d < 1 / 7) :
     3 ≤ d / 10 ∧ D₀n ≤ d / 10 ∧ 10 * (d / 10) ≤ d ∧ (d / 10) ^ 2 ≤ 2 ^ d ∧
-      0 < lam C₁ (d / 10) ∧ lam C₁ (d / 10) ≤ 20 * lamK C₁ * Real.log d ^ 2 / d ∧
+      0 < lam C₁ (d / 10) ∧ lam C₁ (d / 10) ≤ 20 * lamK C₁ * Real.log d / d ∧
       lam C₁ (d / 10) < 1 / 7 ∧
       1 / ((d / 10 : ℕ) : ℝ) ≤ 20 / d ∧ 1 / 2 ^ d ≤ lam C₁ (d / 10) / 4 ∧ (d : ℝ) ≤ 2 ^ d := by
   have hD3 : 3 ≤ d / 10 := by omega
@@ -519,7 +507,7 @@ theorem randReducible_at {CK ηK C₀n C₀y M C : ℝ} {D₀n : ℕ}
         ∀ (f : ℕ → Cube (Fin R) → Bool) (η : ℝ), 0 ≤ η → η ≤ ηK →
           Real.arccos GW.rhoStar / Real.pi - η ≤ kkmoCut GW.rhoStar R G.2.2.2 f →
           (∑ v ∈ range G.2.1, ltfDist (fun x ↦ bitVal (f v x))) / G.2.1 ≤
-            CK * Real.sqrt (η * Real.log (1 / η)) + ξ)
+            CK * Real.sqrt η + ξ)
     (hSn : ∀ D : ℕ, D₀n ≤ D → ∃ (A₀ : ℝ) (n₀ : ℕ), 0 < A₀ ∧
       SparsifyNoAt (2 * CK + 1) (min (ηK / 2) (1 / 6)) C₀n A₀ D n₀)
     (hSy : ∀ D : ℕ, 1 ≤ D → ∃ n₀ : ℕ, SparsifyYesAt C₀y D n₀)
@@ -528,13 +516,13 @@ theorem randReducible_at {CK ηK C₀n C₀y M C : ℝ} {D₀n : ℕ}
         |kkmoCut ρ' R G.2.2.2 f - kkmoCut ρ R G.2.2.2 f| ≤ M * |ρ' - ρ|)
     (hC : 20 * (C₀y + lamK (2 * CK + 1) * C₀n) + 3 ≤ C) (hC₀n : 0 ≤ C₀n) (hC₀y : 0 ≤ C₀y)
     (hUGC : UGC) {d : ℕ} (hd30 : 30 ≤ d) (hdD : 10 * D₀n ≤ d)
-    (hsmall : C * (Real.log d ^ 2 + 1) / d <
+    (hsmall : C * (Real.log d + 1) / d <
       (1 - GW.rhoStar) / 2 - Real.arccos GW.rhoStar / Real.pi)
-    (hlam7 : 20 * lamK (2 * CK + 1) * Real.log d ^ 2 / d < 1 / 7) :
+    (hlam7 : 20 * lamK (2 * CK + 1) * Real.log d / d < 1 / 7) :
     ∃ (R : ℕ) (ε : ℝ), PromiseProblem.NPHard encUG (ugGap R ε ε) ∧
       RandReducible encUG encGraph (ugGap R ε ε)
         (maxCutGap d ((1 - GW.rhoStar) / 2 - C / d)
-          (Real.arccos GW.rhoStar / Real.pi + C * Real.log d ^ 2 / d)) := by
+          (Real.arccos GW.rhoStar / Real.pi + C * Real.log d / d)) := by
   have hdr : (0 : ℝ) < d := by exact_mod_cast (show 0 < d by omega)
   obtain ⟨hD3, hDn, hΔ, hΔ2, hlam0, hlamle, hlam1, hinvD, htv, hd2⟩ :=
     d_facts (2 * CK + 1) hd30 hdD hlam7
@@ -547,8 +535,7 @@ theorem randReducible_at {CK ηK C₀n C₀y M C : ℝ} {D₀n : ℕ}
   obtain ⟨ε₀, hε₀, -, hU⟩ := hUGC
   obtain ⟨ε₁s, hε₁s, hsound⟩ :=
     kkmo_sound hρd1 hρd0 (show 0 < lam (2 * CK + 1) (d / 10) / 8 by positivity)
-  have hξr : 0 < Real.sqrt (lam (2 * CK + 1) (d / 10) * Real.log (1 / lam (2 * CK + 1) (d / 10))) :=
-    Real.sqrt_pos.2 (mul_pos hlam0 (Real.log_pos (one_lt_one_div hlam0 (by linarith))))
+  have hξr : 0 < Real.sqrt (lam (2 * CK + 1) (d / 10)) := Real.sqrt_pos.2 hlam0
   obtain ⟨ε₁r, hε₁r, hrob⟩ := hrobK _ hξr
   obtain ⟨ε, hεdef⟩ : ∃ ε : ℝ, ε = min (min ε₀ ε₁s) (min ε₁r (1 / (4 * d))) := ⟨_, rfl⟩
   have hε0 : 0 < ε := by rw [hεdef]; positivity
@@ -597,25 +584,25 @@ theorem randReducible_at {CK ηK C₀n C₀y M C : ℝ} {D₀n : ℕ}
       div_nonneg (Real.arccos_nonneg _) Real.pi_pos.le
     have hss1 : Real.arccos GW.rhoStar / Real.pi ≤ 1 := by
       rw [div_le_one Real.pi_pos]; exact Real.arccos_le_pi _
-    have hlog0 : 0 ≤ Real.log d ^ 2 :=
-      pow_nonneg (Real.log_nonneg (by exact_mod_cast (show 1 ≤ d by omega))) 2
+    have hlog0 : 0 ≤ Real.log d := Real.log_nonneg (by exact_mod_cast (show 1 ≤ d by omega))
     have hCnn : 0 ≤ C := by linarith
     obtain ⟨hs', hsc⟩ := no_arith hdr hC₀n (K := 20 * lamK (2 * CK + 1)) (by linarith) hlog0
       hlamle hsmall
-    have hlogd : 0 ≤ C * Real.log d ^ 2 / d := by positivity
+    have hlogd : 0 ≤ C * Real.log d / d := by positivity
     refine no_case (P := P) hG hq hSn' hnn hΔ (show 1 ≤ d / 10 by omega) hκ hΔ2 hA hss0 hss1 htv
       (fun f' ↦ ?_) ?_ hs' (by linarith) hsc
     · have := hsound ε hε0 hεs R G hG hval f'
       exact this.trans (by linarith)
-    · refine hrob_of_robust (ρ := GW.rhoStar) hlam0 (min_le_left _ _) (min_le_right _ _) hCK.le
+    · refine hrob_of_robust (ρ := GW.rhoStar) hlam0 (min_le_left _ _) hCK.le
         (hrob ε hε0 hεr R G hG hval) fun f ↦ ?_
       exact (hlip GW.rhoStar _ hρsabs hρdabs R G hG f).trans hMd
 
-/-- **Theorem 1.2** of [BGHKLMM26] (with the paper's `log² d`), assuming the robust Majority is
-Stablest theorem in Eldan's form (`BGHKLMM26.Hard.RobustMIS`) and the Unique Games Conjecture. -/
+/-- **Theorem 1.2** of [BGHKLMM26], with `log d / d` in place of the paper's `log² d / d`,
+assuming the robust Majority is Stablest theorem with the error `C √η`
+(`BGHKLMM26.Hard.RobustMIS`) and the Unique Games Conjecture. -/
 theorem maxCut_hardness_of_robustMIS (hMIS : RobustMIS) (hUGC : UGC) :
     ∃ (C : ℝ) (d₀ : ℕ), ∀ d : ℕ, d₀ ≤ d → ∀ ρ : ℝ, IsGWMinimizer ρ →
-      maxCutGap d ((1 - ρ) / 2 - C / d) (Real.arccos ρ / Real.pi + C * Real.log d ^ 2 / d) ∈
+      maxCutGap d ((1 - ρ) / 2 - C / d) (Real.arccos ρ / Real.pi + C * Real.log d / d) ∈
         PromiseBPP encGraph →
       ∀ (α : Type) (enc : α ↪ List Bool), NP enc ⊆ BPP enc := by
   have hw := GW.rhoStar_mem_window

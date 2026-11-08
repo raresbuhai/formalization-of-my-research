@@ -11,7 +11,7 @@ instead of the instances given by the Unique Games Conjecture. For every large `
 dyadic correlation `ρ_d = 1 - 2q/2^b ∈ (-1, 0)` within `C/d` of `ρ*` in `(1 - ρ)/2`, a number of
 labels `R₀` and a value `ε₀` such that, with `R ≥ R₀` labels and value at most `ε₀`, the
 reduction with parameters `(R, b, q, ⌊d/10⌋, d)` outputs a graph of maximum degree at most `d`
-and Max-Cut value at most `s* + C log² d / d` with probability `9/10`.
+and Max-Cut value at most `s* + C log d / d` with probability `9/10`.
 
 The proof is the soundness branch of `randReducible_at`: KKMO soundness
 (`BGHKLMM26.Hard.kkmo_sound`), the robust inverse from Theorem 7.1
@@ -38,7 +38,7 @@ theorem sound_at (hMIS : RobustMIS) :
         ∀ G : UGInstance, GoodI R G → G.2.2.2 ≠ [] → ugValue G ≤ ε₀ →
           9 / 10 ≤ ((ProbComp.eval (redProg ⟨R, b, q, d / 10, d⟩ G)).toOuterMeasure
             (maxCutGap d ((1 - GW.rhoStar) / 2 - C / d)
-              (Real.arccos GW.rhoStar / Real.pi + C * Real.log d ^ 2 / d)).no).toReal := by
+              (Real.arccos GW.rhoStar / Real.pi + C * Real.log d / d)).no).toReal := by
   have hw := GW.rhoStar_mem_window
   obtain ⟨CK, ηK, hCK, hηK, hηK1, hrobK⟩ :=
     kkmo_robust hMIS (ρ := GW.rhoStar) (by linarith [hw.1]) (by linarith [hw.2])
@@ -65,8 +65,7 @@ theorem sound_at (hMIS : RobustMIS) :
   -- `ε₀`
   obtain ⟨ε₁s, hε₁s, hsound⟩ :=
     kkmo_sound hρd1 hρd0 (show 0 < lam (2 * CK + 1) (d / 10) / 8 by positivity)
-  have hξr : 0 < Real.sqrt (lam (2 * CK + 1) (d / 10) * Real.log (1 / lam (2 * CK + 1) (d / 10))) :=
-    Real.sqrt_pos.2 (mul_pos hlam0 (Real.log_pos (one_lt_one_div hlam0 (by linarith))))
+  have hξr : 0 < Real.sqrt (lam (2 * CK + 1) (d / 10)) := Real.sqrt_pos.2 hlam0
   obtain ⟨ε₁r, hε₁r, hrob⟩ := hrobK _ hξr
   -- `R₀`
   obtain ⟨A₀, n₀n, hA₀, hSn'⟩ := hSn (d / 10) hDn
@@ -93,11 +92,10 @@ theorem sound_at (hMIS : RobustMIS) :
     div_nonneg (Real.arccos_nonneg _) Real.pi_pos.le
   have hss1 : Real.arccos GW.rhoStar / Real.pi ≤ 1 := by
     rw [div_le_one Real.pi_pos]; exact Real.arccos_le_pi _
-  have hlog0 : 0 ≤ Real.log d ^ 2 :=
-    pow_nonneg (Real.log_nonneg (by exact_mod_cast (show 1 ≤ d by omega))) 2
+  have hlog0 : 0 ≤ Real.log d := Real.log_nonneg (by exact_mod_cast (show 1 ≤ d by omega))
   obtain ⟨hs', hsc⟩ := no_arith hdr hC₀n.le (K := 20 * lamK (2 * CK + 1)) hCK' hlog0
     hlamle hsmall
-  have hlogd : 0 ≤ C * Real.log d ^ 2 / d := by
+  have hlogd : 0 ≤ C * Real.log d / d := by
     have : 0 ≤ C := by linarith
     positivity
   have hε0 : 0 < min ε₁s ε₁r := lt_min hε₁s hε₁r
@@ -105,7 +103,7 @@ theorem sound_at (hMIS : RobustMIS) :
     (fun f' ↦ ?_) ?_ hs' (by linarith) hsc
   · have := hsound _ hε0 (min_le_left _ _) R G hG hval f'
     exact this.trans (by linarith)
-  · refine hrob_of_robust (ρ := GW.rhoStar) hlam0 (min_le_left _ _) (min_le_right _ _) hCK.le
+  · refine hrob_of_robust (ρ := GW.rhoStar) hlam0 (min_le_left _ _) hCK.le
       (hrob _ hε0 (min_le_right _ _) R G hG hval) fun f ↦ ?_
     exact (hlip GW.rhoStar _ hρsabs hρdabs R G hG f).trans hMd
 

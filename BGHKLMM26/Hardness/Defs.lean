@@ -11,7 +11,7 @@ The objects of the proof of [BGHKLMM26, Theorem 1.2], shared by the files of `BG
 * **LTFs** (`BGHKLMM26.Hard.IsLTF`, `BGHKLMM26.Hard.ltfDist`): linear threshold functions on the
   cube and the `L¹` distance to the nearest one; the cut value `Cut_ρ(g)`
   (`BGHKLMM26.Hard.cutValue`); and the robust Majority is Stablest theorem as a statement,
-  `BGHKLMM26.Hard.RobustMIS` ([BGHKLMM26, Theorem 7.1] with Eldan's estimate, Remark 7.3).
+  `BGHKLMM26.Hard.RobustMIS` ([BGHKLMM26, Theorem 7.1], with the error `C √η` of Lemma 7.4).
 * **The dense graph** of the KKMO reduction (Figure 5.1), without the noise `μ`: the cut value
   `BGHKLMM26.Hard.kkmoCut` of a cut of `V × {0,1}^R`, for a correlation `ρ`.
 * **The machine**: the decoder of one sampled edge from a block of coins
@@ -49,17 +49,16 @@ noncomputable def ltfDist {R : ℕ} (g : Cube (Fin R) → ℝ) : ℝ :=
 noncomputable def cutValue (ρ : ℝ) {R : ℕ} (g : Cube (Fin R) → ℝ) : ℝ :=
   corrAverage ρ R (fun x y ↦ g x + g y - 2 * g x * g y)
 
-/-- **Robust Majority is Stablest** [BGHKLMM26, Theorem 7.1], with the error of its Remark 7.3
-(Eldan's estimate in place of Heilman's): for `ρ ∈ (-1, 0)` there are `C` and `η₀` such that for
-every `ξ > 0` there is `τ > 0` for which a table `g : {0,1}^R → [0,1]` with influences at most `τ`
-that cuts at least `arccos ρ / π - η` of the `ρ`-correlated pairs, `0 ≤ η ≤ η₀`, is within
-`C √(η log(1/η)) + ξ` of an LTF. (The paper's `h_ρ(τ) → 0` is the `ξ` here.) -/
+/-- **Robust Majority is Stablest** [BGHKLMM26, Theorem 7.1]: for `ρ ∈ (-1, 0)` there are `C` and
+`η₀` such that for every `ξ > 0` there is `τ > 0` for which a table `g : {0,1}^R → [0,1]` with
+influences at most `τ` that cuts at least `arccos ρ / π - η` of the `ρ`-correlated pairs,
+`0 ≤ η ≤ η₀`, is within `C √η + ξ` of an LTF. (The paper's `h_ρ(τ) → 0` is the `ξ` here.) -/
 def RobustMIS : Prop :=
   ∀ ρ : ℝ, -1 < ρ → ρ < 0 → ∃ C η₀ : ℝ, 0 < C ∧ 0 < η₀ ∧ η₀ < 1 ∧
     ∀ ξ : ℝ, 0 < ξ → ∃ τ : ℝ, 0 < τ ∧
       ∀ (R : ℕ) (g : Cube (Fin R) → ℝ), (∀ x, 0 ≤ g x ∧ g x ≤ 1) → (∀ i, influence i g ≤ τ) →
         ∀ η : ℝ, 0 ≤ η → η ≤ η₀ → Real.arccos ρ / Real.pi - η ≤ cutValue ρ g →
-          ltfDist g ≤ C * Real.sqrt (η * Real.log (1 / η)) + ξ
+          ltfDist g ≤ C * Real.sqrt η + ξ
 
 /-! ### Points of the cube as numbers -/
 

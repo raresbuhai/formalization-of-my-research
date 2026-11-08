@@ -168,7 +168,7 @@ theorem sdp_event {C₀ : ℝ} {k z T Δs n₀ : ℕ} {P : Prm} (hk1 : 1 ≤ k) 
   exact key
 
 /-- **The witness at one degree**: for `d ≥ d₀`, a graph of maximum degree `d` and Max-Cut value
-at most `s* + C log² d / d` with an SDP solution of value at least `c* - C'/d`. -/
+at most `s* + C log d / d` with an SDP solution of value at least `c* - C'/d`. -/
 theorem witness_at {C₁ C₀ : ℝ} {d₁ : ℕ} (hC₀ : 0 < C₀) (hd₁ : 30 ≤ d₁)
     (hS : ∀ d : ℕ, d₁ ≤ d → ∃ (b q R₀ : ℕ) (ε₀ : ℝ),
       0 < ε₀ ∧ q ≤ 2 ^ b ∧ -1 < 1 - 2 * (q : ℝ) / 2 ^ b ∧ 1 - 2 * (q : ℝ) / 2 ^ b < 0 ∧
@@ -178,7 +178,7 @@ theorem witness_at {C₁ C₀ : ℝ} {d₁ : ℕ} (hC₀ : 0 < C₀) (hd₁ : 30
         ∀ G : UGInstance, GoodI R G → G.2.2.2 ≠ [] → ugValue G ≤ ε₀ →
           9 / 10 ≤ ((ProbComp.eval (redProg ⟨R, b, q, d / 10, d⟩ G)).toOuterMeasure
             (maxCutGap d ((1 - GW.rhoStar) / 2 - C₁ / d)
-              (Real.arccos GW.rhoStar / Real.pi + C₁ * Real.log d ^ 2 / d)).no).toReal)
+              (Real.arccos GW.rhoStar / Real.pi + C₁ * Real.log d / d)).no).toReal)
     (hY : ∀ D : ℕ, 1 ≤ D → ∃ n₀ : ℕ, ∀ n : ℕ, n₀ ≤ n →
       ∀ Δ : ℕ, 10 * D ≤ Δ → ∀ (Ω : Type) [Fintype Ω] [Nonempty Ω] (dec : Ω → Fin n × Fin n),
         (∀ a, frac (fun ω ↦ (dec ω).1 = a ∨ (dec ω).2 = a) ≤ 3 / n) →
@@ -191,7 +191,7 @@ theorem witness_at {C₁ C₀ : ℝ} {d₁ : ℕ} (hC₀ : 0 < C₀) (hd₁ : 30
     ∃ (H : Graph) (v : Fin H.1 → EuclideanSpace ℝ (Fin H.1)),
       MaxDegreeAtMost H d ∧ IsSDPSolution H.1 v ∧
       (1 - GW.rhoStar) / 2 - (C₁ + 20 * C₀ + 5) / d ≤ sdpValue H v ∧
-      maxCutValue H ≤ Real.arccos GW.rhoStar / Real.pi + C₁ * Real.log d ^ 2 / d := by
+      maxCutValue H ≤ Real.arccos GW.rhoStar / Real.pi + C₁ * Real.log d / d := by
   have hd30 : 30 ≤ d := hd₁.trans hd
   have hdr : (0 : ℝ) < d := by exact_mod_cast (show 0 < d by omega)
   obtain ⟨b, q, R₀, ε₀, hε₀, hq, hρ1, hρ0, hρc, hR⟩ := hS d hd
@@ -282,14 +282,14 @@ theorem witness_at {C₁ C₀ : ℝ} {d₁ : ℕ} (hC₀ : 0 < C₀) (hd₁ : 30
   linarith
 
 /-- The arithmetic of the integrality gap: with `B ≥ max(C₁, C₂, 1)` and `C = 4B/c*`, Max-Cut
-value at most `s* + C₁ log² d/d` and SDP value at least `c* - C₂/d` give the three bounds. -/
+value at most `s* + C₁ log d/d` and SDP value at least `c* - C₂/d` give the three bounds. -/
 theorem gap_arith {C₁ C₂ : ℝ} (hC₁ : 0 < C₁) (hC₂ : 0 < C₂) :
     ∃ (C : ℝ) (d₂ : ℕ), ∀ d : ℕ, d₂ ≤ d → ∀ {mc sv : ℝ},
-      mc ≤ Real.arccos GW.rhoStar / Real.pi + C₁ * Real.log d ^ 2 / d →
+      mc ≤ Real.arccos GW.rhoStar / Real.pi + C₁ * Real.log d / d →
       (1 - GW.rhoStar) / 2 - C₂ / d ≤ sv →
       (1 - GW.rhoStar) / 2 - C / d ≤ sv ∧
-      mc ≤ Real.arccos GW.rhoStar / Real.pi + C * Real.log d ^ 2 / d ∧
-      mc ≤ (alphaGW + C * Real.log d ^ 2 / d) * sv := by
+      mc ≤ Real.arccos GW.rhoStar / Real.pi + C * Real.log d / d ∧
+      mc ≤ (alphaGW + C * Real.log d / d) * sv := by
   have hρ := GW.rhoStar_mem_window
   obtain ⟨cs, hcs_def⟩ : ∃ cs, cs = (1 - GW.rhoStar) / 2 := ⟨_, rfl⟩
   have hcs : 0 < cs := by rw [hcs_def]; linarith [hρ.2]
@@ -306,17 +306,14 @@ theorem gap_arith {C₁ C₂ : ℝ} (hC₁ : 0 < C₁) (hC₂ : 0 < C₂) :
   refine ⟨4 * B / cs, max 3 (⌈4 * B / cs⌉₊ + 1), fun d hd mc sv hmc hsv ↦ ?_⟩
   rw [← hcs_def] at hsv ⊢
   rw [hss] at hmc ⊢
-  have hd3 : (3 : ℝ) ≤ d := by exact_mod_cast (le_max_left _ _).trans hd
+  have hd3 : 3 ≤ d := (le_max_left _ _).trans hd
   have hdB : 4 * B / cs < d := by
     have h1 : ⌈4 * B / cs⌉₊ + 1 ≤ d := (le_max_right _ _).trans hd
     have h2 : ((⌈4 * B / cs⌉₊ : ℕ) : ℝ) + 1 ≤ d := by exact_mod_cast h1
     linarith [Nat.le_ceil (4 * B / cs)]
-  have hd0 : (0 : ℝ) < d := by linarith
-  have hL : 1 ≤ Real.log d ^ 2 := by
-    have : 1 < Real.log d :=
-      KKMORobust.one_lt_log_three.trans_le (Real.log_le_log (by norm_num) hd3)
-    exact one_le_pow₀ this.le
-  obtain ⟨L, hL_def⟩ : ∃ L, L = Real.log d ^ 2 := ⟨_, rfl⟩
+  have hd0 : (0 : ℝ) < d := by exact_mod_cast (show 0 < d by omega)
+  have hL : 1 ≤ Real.log d := (one_lt_log_of_three_le hd3).le
+  obtain ⟨L, hL_def⟩ : ∃ L, L = Real.log d := ⟨_, rfl⟩
   rw [← hL_def] at hmc hL ⊢
   obtain ⟨u, hu_def⟩ : ∃ u, u = B / d := ⟨_, rfl⟩
   obtain ⟨v, hv_def⟩ : ∃ v, v = 4 * B / cs / d := ⟨_, rfl⟩
@@ -355,8 +352,8 @@ theorem integrality_gap (hMIS : RobustMIS) :
       ∃ (H : Graph) (v : Fin H.1 → EuclideanSpace ℝ (Fin H.1)),
         MaxDegreeAtMost H d ∧ IsSDPSolution H.1 v ∧
         (1 - ρ) / 2 - C / d ≤ sdpValue H v ∧
-        maxCutValue H ≤ Real.arccos ρ / Real.pi + C * Real.log d ^ 2 / d ∧
-        maxCutValue H ≤ (alphaGW + C * Real.log d ^ 2 / d) * sdpValue H v := by
+        maxCutValue H ≤ Real.arccos ρ / Real.pi + C * Real.log d / d ∧
+        maxCutValue H ≤ (alphaGW + C * Real.log d / d) * sdpValue H v := by
   obtain ⟨C₁, d₁, hC₁, hd₁, hS⟩ := sound_at hMIS
   obtain ⟨C₀, hC₀, hY⟩ := sparsify_yes_score
   obtain ⟨C, d₂, hC⟩ := gap_arith hC₁ (show 0 < C₁ + 20 * C₀ + 5 by positivity)

@@ -26,7 +26,7 @@ Background/                 shared material used by more than one paper
   SumOfSquares/             the sum-of-squares method (see its README.md)
 Imported/                   libraries copied from elsewhere, adapted to our Lean and Mathlib
   TauCeti/                  from TauCeti: the Gaussian distribution function, Owen's T function,
-                            and Bernstein's inequality
+                            Bernstein's inequality, and the Hermite basis of Gaussian L²
   OAI/                      from OpenAI's library: Majority is Stablest
   KMedian195/               from project-k-median: the 1.95 bound on a factor-revealing program
 <Key>/

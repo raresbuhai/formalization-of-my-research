@@ -15,7 +15,7 @@ definitions are in `BGHKLMM26/Hardness/Sparsify.lean`), for `S = n D` samples:
 * **soundness** (Lemmas 6.6 and 6.7): a cut far from optimal (`W_f < s - η₀/2`) is handled by
   Hoeffding and a union bound over all `2^n` cuts; a near cut lies at a dyadic level
   `η = 2^j λ ∈ [λ, η₀]` (`BGHKLMM26.Hard.exists_level`) and within `δ(η) n`,
-  `δ(η) = min(C₁ √(η log(1/η)), 1)`, of some `L ∈ 𝓛`; Bernstein bounds the deviation of
+  `δ(η) = min(C₁ √η, 1)`, of some `L ∈ 𝓛`; Bernstein bounds the deviation of
   `Z_f - Z_L` (`BGHKLMM26.Hard.frac_pair_dev_le`), with a union bound over the Hamming ball, the
   levels and `𝓛` (`BGHKLMM26.Hard.frac_pairs_le`), and Hoeffding bounds `Z_L`. On the good event
   every cut cuts at most `S (s + 2λ)` samples (`BGHKLMM26.Hard.empCut_le_of_good`), so the Max-Cut
@@ -158,7 +158,7 @@ theorem exists_level {lam η₀ s W : ℝ} (hlam : 0 < lam) (hlη₀ : lam ≤ �
 
 /-- The Hamming condition of the structure hypothesis gives the capped radius. -/
 theorem ham_le_radius {C₁ η : ℝ} (f L : Fin n → Bool)
-    (h : ((univ.filter fun a ↦ f a ≠ L a).card : ℝ) ≤ C₁ * Real.sqrt (η * Real.log (1 / η)) * n) :
+    (h : ((univ.filter fun a ↦ f a ≠ L a).card : ℝ) ≤ C₁ * Real.sqrt η * n) :
     ((univ.filter fun a ↦ L a ≠ f a).card : ℝ) ≤ radius C₁ η * n := by
   have hc : (univ.filter fun a ↦ L a ≠ f a) = univ.filter fun a ↦ f a ≠ L a := by
     ext a; simp [ne_comm]
@@ -174,7 +174,7 @@ theorem empCut_le_of_good (dec : Ω → Fin n × Fin n) {S : ℕ} (ω : Fin S �
     (𝓛 : Finset (Fin n → Bool))
     (hstruct : ∀ (f : Fin n → Bool) (η : ℝ), lam ≤ η → η ≤ η₀ → s - η ≤ lawCut dec f →
       ∃ L ∈ 𝓛, ((univ.filter fun a ↦ f a ≠ L a).card : ℝ) ≤
-        C₁ * Real.sqrt (η * Real.log (1 / η)) * n)
+        C₁ * Real.sqrt η * n)
     (hfar : ∀ g, (empCut dec ω g : ℝ) < S * (lawCut dec g + η₀ / 2))
     (hL : ∀ L ∈ 𝓛, (empCut dec ω L : ℝ) < S * (lawCut dec L + lam))
     (hpair : ∀ L ∈ 𝓛, ∀ j : ℕ, 2 ^ j * lam ≤ η₀ → ∀ g,
@@ -257,7 +257,7 @@ theorem frac_pairs_le (dec : Ω → Fin n × Fin n)
 /-- **The exponent at one level**: the Hamming ball times Bernstein's bound is at most
 `exp(-n D λ² / 112)`. -/
 theorem level_exponent_le {C₁ η₀ : ℝ} (hC₁ : 0 < C₁) (hη₀1 : η₀ < 1) {D : ℕ} (hD : (0 : ℝ) < D)
-    (hl1 : 1 ≤ Real.log D) (hl : ellReq C₁ η₀ ≤ Real.log D) {η : ℝ} (hlη : lam C₁ D ≤ η)
+    (hl1 : 1 ≤ Real.log D) (hl : ellReq C₁ ≤ Real.log D) {η : ℝ} (hlη : lam C₁ D ≤ η)
     (hηη₀ : η ≤ η₀) (n : ℕ) :
     Real.exp (radius C₁ η * n * Real.log (Real.exp 1 / radius C₁ η)) *
       Real.exp (-(((n * D : ℕ) : ℝ) * (η / 2) ^ 2) / (4 * (3 * radius C₁ η) + 4 * 1 * (η / 2))) ≤
@@ -326,7 +326,7 @@ theorem far_term_le {n D : ℕ} {η₀ : ℝ} (hDη : 4 ≤ D * η₀ ^ 2) :
 /-- **The bad events have probability at most `1/10`.** -/
 theorem frac_bad_le {C₁ η₀ : ℝ} (hC₁ : 0 < C₁) (hη₀ : 0 < η₀) (hη₀1 : η₀ < 1) {D : ℕ}
     (hD360 : 360 ≤ D)
-    (hl1 : 1 ≤ Real.log D) (hl : ellReq C₁ η₀ ≤ Real.log D) (hDη : 4 ≤ D * η₀ ^ 2)
+    (hl1 : 1 ≤ Real.log D) (hl : ellReq C₁ ≤ Real.log D) (hDη : 4 ≤ D * η₀ ^ 2)
     (hn40 : (40 : ℝ) ≤ n) (hnc : 80 * (D + 1) / (D * lam C₁ D ^ 2 / 112) ≤ n) {Δ : ℕ}
     (hΔ : 10 * D ≤ Δ) (dec : Ω → Fin n × Fin n)
     (htouch : ∀ a, frac (fun x ↦ (dec x).1 = a ∨ (dec x).2 = a) ≤ 3 / n)
@@ -385,7 +385,7 @@ theorem frac_bad_le {C₁ η₀ : ℝ} (hC₁ : 0 < C₁) (hη₀ : 0 < η₀) (
       exact ⟨le_mul_of_one_le_left hlam.le (one_le_pow₀ (by norm_num)), hj.2⟩
     have h := frac_pairs_le dec htouch 𝓛 ((range D).filter (fun j ↦ (2 : ℝ) ^ j * lam C₁ D ≤ η₀))
       (fun j ↦ radius C₁ (2 ^ j * lam C₁ D)) (fun j ↦ 2 ^ j * lam C₁ D / 2)
-      (fun j hj ↦ radius_pos hC₁ (lt_of_lt_of_le hlam (hlev j hj).1) (hlev j hj).2 hη₀1)
+      (fun j hj ↦ radius_pos hC₁ (lt_of_lt_of_le hlam (hlev j hj).1))
       (fun j _ ↦ radius_le_one _ _) (fun j _ ↦ by positivity) (n * D) (c := n * c)
       (fun j hj ↦ by
         have := level_exponent_le hC₁ hη₀1 hDpos hl1 hl (hlev j hj).1 (hlev j hj).2 n
@@ -480,7 +480,7 @@ theorem sparsify_yes : ∃ C₀ : ℝ, 0 < C₀ ∧ ∀ D : ℕ, 1 ≤ D → ∃
     _ ≤ _ := frac_imp_le hgood
 
 /-- **Soundness of the sparsification** [BGHKLMM26, Lemmas 6.6, 6.7, 6.9, 6.10 and Theorem 6.1],
-with the robust inverse in Eldan's form. -/
+with the robust inverse at the rate `√η`. -/
 theorem sparsify_no {C₁ η₀ : ℝ} (hC₁ : 0 < C₁) (hη₀ : 0 < η₀) (hη₀1 : η₀ < 1) :
     ∃ (C₀ : ℝ) (D₀ : ℕ), 0 < C₀ ∧ ∀ D : ℕ, D₀ ≤ D → ∃ (A₀ : ℝ) (n₀ : ℕ), 0 < A₀ ∧
       ∀ n : ℕ, n₀ ≤ n → ∀ Δ : ℕ, 10 * D ≤ Δ →
@@ -491,7 +491,7 @@ theorem sparsify_no {C₁ η₀ : ℝ} (hC₁ : 0 < C₁) (hη₀ : 0 < η₀) (
       ∀ 𝓛 : Finset (Fin n → Bool), (𝓛.card : ℝ) ≤ Real.exp (n / A₀) →
       (∀ (f : Fin n → Bool) (η : ℝ), lam C₁ D ≤ η → η ≤ η₀ → s - η ≤ lawCut dec f →
         ∃ L ∈ 𝓛, ((univ.filter fun a ↦ f a ≠ L a).card : ℝ) ≤
-          C₁ * Real.sqrt (η * Real.log (1 / η)) * n) →
+          C₁ * Real.sqrt η * n) →
       9 / 10 ≤ frac fun ω : Fin (n * D) → Ω ↦
         maxCutValue (sampledGraph n Δ dec ω) ≤ s + C₀ * lam C₁ D := by
   obtain ⟨D₀, hD₀⟩ := exists_D₀ C₁ hη₀
@@ -533,7 +533,7 @@ theorem sparsify_no {C₁ η₀ : ℝ} (hC₁ : 0 < C₁) (hη₀ : 0 < η₀) (
     rw [hS]
     have hDl : (1 : ℝ) ≤ D * lam C₁ D := by
       rw [lam_eq_mul C₁ D hDpos]
-      exact one_le_mul_of_one_le_of_one_le (one_le_lamK C₁) (one_le_pow₀ hl1)
+      exact one_le_mul_of_one_le_of_one_le (one_le_lamK C₁) hl1
     exact value_ratio_le hnpos hD360 hs1 hlam hDl
   calc (9 / 10 : ℝ) ≤ 1 - 1 / 10 := by norm_num
     _ ≤ 1 - frac (fun ω : Fin (n * D) → Ω ↦

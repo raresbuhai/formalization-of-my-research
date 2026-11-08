@@ -5,7 +5,7 @@ import BGHKLMM26.GW
 import BGHKLMM26.Assembly
 import BGHKLMM26.RunTime
 import BGHKLMM26.Hardness.Main
-import BGHKLMM26.RobustMIS.Main
+import BGHKLMM26.RobustMIS.Final
 import BGHKLMM26.Inapprox
 import BGHKLMM26.IntGap.Main
 
@@ -21,7 +21,7 @@ the development in this folder. Don't import `Challenge` here: the names would c
   `BGHKLMM26.Alg.exists_runsInTime`.
 * `BGHKLMM26.maxCut_hardness`: `BGHKLMM26.Hard.maxCut_hardness_of_robustMIS`
   (`BGHKLMM26/Hardness/Main.lean`) from Theorem 7.1, `BGHKLMM26.RobustMIS.robustMIS`
-  (`BGHKLMM26/RobustMIS/Main.lean`).
+  (`BGHKLMM26/RobustMIS/Final.lean`).
 * `BGHKLMM26.maxCut_inapproximability`: `BGHKLMM26.Inapprox.of_hardness`
   (`BGHKLMM26/Inapprox.lean`) from Theorem 1.2.
 * `BGHKLMM26.maxCut_integrality_gap`: `BGHKLMM26.IntGap.integrality_gap`
@@ -78,39 +78,39 @@ theorem max2lin_approximation :
 open Cslib.Complexity in
 /-- **Theorem 1.2** of [BGHKLMM26]: assuming the Unique Games Conjecture, for every large enough
 `d`, no polynomial-time algorithm tells graphs of maximum degree at most `d` with Max-Cut value at
-least `c* - C/d` from those with value at most `s* + C log² d / d` with bounded error, unless
+least `c* - C/d` from those with value at most `s* + C log d / d` with bounded error, unless
 `NP ⊆ BPP`. -/
 theorem maxCut_hardness (hUGC : UGC) :
     ∃ (C : ℝ) (d₀ : ℕ), ∀ d : ℕ, d₀ ≤ d → ∀ ρ : ℝ, IsGWMinimizer ρ →
-      maxCutGap d ((1 - ρ) / 2 - C / d) (Real.arccos ρ / Real.pi + C * Real.log d ^ 2 / d) ∈
+      maxCutGap d ((1 - ρ) / 2 - C / d) (Real.arccos ρ / Real.pi + C * Real.log d / d) ∈
         PromiseBPP encGraph →
       ∀ (α : Type) (enc : α ↪ List Bool), NP enc ⊆ BPP enc :=
   Hard.maxCut_hardness_of_robustMIS RobustMIS.robustMIS hUGC
 
 open Cslib.Complexity in
 /-- **Corollary 1.3** of [BGHKLMM26]: assuming the Unique Games Conjecture, for every large enough
-`d`, a randomized polynomial-time algorithm whose expected cut is at least `(α_GW + C log² d / d)`
+`d`, a randomized polynomial-time algorithm whose expected cut is at least `(α_GW + C log d / d)`
 times the maximum cut on graphs of maximum degree at most `d` puts `NP` in `BPP`. -/
 theorem maxCut_inapproximability (hUGC : UGC) :
     ∃ (C : ℝ) (d₀ : ℕ), ∀ d : ℕ, d₀ ≤ d →
       ∀ (A : Instance × List Bool → List Bool) (k : ℕ), RunsInTime A (fun N ↦ (N + 2) ^ k) →
       (∀ I : Instance, Valid I → IsMaxCutInstance I → MaxDegreeLE I d →
-        (alphaGW + C * Real.log d ^ 2 / d) * opt I ≤
+        (alphaGW + C * Real.log d / d) * opt I ≤
           coinMean (((encInstance I).length + 2) ^ k) fun r ↦ outputWeight I (A (I, r))) →
       ∀ (α : Type) (enc : α ↪ List Bool), NP enc ⊆ BPP enc :=
   Inapprox.of_hardness (maxCut_hardness hUGC)
 
 /-- **Theorem 1.4** of [BGHKLMM26]: for every large enough `d` there is a graph of maximum degree
 at most `d` with a solution of the Goemans–Williamson SDP with triangle inequalities of value at
-least `c* - C/d` and Max-Cut value at most `s* + C log² d / d`, so that the integrality gap is at
-most `α_GW + C log² d / d`. -/
+least `c* - C/d` and Max-Cut value at most `s* + C log d / d`, so that the integrality gap is at
+most `α_GW + C log d / d`. -/
 theorem maxCut_integrality_gap :
     ∃ (C : ℝ) (d₀ : ℕ), ∀ d : ℕ, d₀ ≤ d → ∀ ρ : ℝ, IsGWMinimizer ρ →
       ∃ (H : Graph) (v : Fin H.1 → EuclideanSpace ℝ (Fin H.1)),
         MaxDegreeAtMost H d ∧ IsSDPSolution H.1 v ∧
         (1 - ρ) / 2 - C / d ≤ sdpValue H v ∧
-        maxCutValue H ≤ Real.arccos ρ / Real.pi + C * Real.log d ^ 2 / d ∧
-        maxCutValue H ≤ (alphaGW + C * Real.log d ^ 2 / d) * sdpValue H v :=
+        maxCutValue H ≤ Real.arccos ρ / Real.pi + C * Real.log d / d ∧
+        maxCutValue H ≤ (alphaGW + C * Real.log d / d) * sdpValue H v :=
   IntGap.integrality_gap RobustMIS.robustMIS
 
 end BGHKLMM26

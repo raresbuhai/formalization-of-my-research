@@ -21,7 +21,7 @@ public import BGHKLMM26.PolyTime
 public import BGHKLMM26.RunTime
 public import BGHKLMM26.Stablest
 public import BGHKLMM26.Hardness.Main
-public import BGHKLMM26.RobustMIS.Main
+public import BGHKLMM26.RobustMIS.Final
 public import BGHKLMM26.Inapprox
 public import BGHKLMM26.IntGap.Main
 

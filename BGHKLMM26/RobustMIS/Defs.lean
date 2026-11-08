@@ -9,8 +9,8 @@ public import Mathlib.Analysis.SpecialFunctions.Trigonometric.Inverse
 /-!
 # Robust Majority is Stablest: definitions
 
-The objects of the proof of [BGHKLMM26, Theorem 7.1] with Eldan's estimate (Remark 7.3), shared by
-the files of `BGHKLMM26/RobustMIS/`. See `BGHKLMM26/RobustMIS/README.md` for the route of the proof.
+The objects of the proof of [BGHKLMM26, Theorem 7.1], shared by the files of
+`BGHKLMM26/RobustMIS/`. See `BGHKLMM26/RobustMIS/README.md` for the route of the proof.
 
 * **One-dimensional Gaussian functions**: the density `npdf = φ`, the quantile `Psi = Φ⁻¹`, the
   isoperimetric function `qf = φ ∘ Φ⁻¹`, the bivariate quadrant function `Gam r a = Γ_r(a)`
@@ -76,7 +76,7 @@ noncomputable def psiL (x : ℝ) : ℝ := x * √(Real.log (1 / x))
 noncomputable def clip01 (x : ℝ) : ℝ := min (max x 0) 1
 
 /-- The rate `ω(x) = √(x̄ log(e/x̄))`, `x̄ = min(max x 0, 1)`, `ω(0) = 0` (Lemma 1.3 of
-`eldan-proof.tex`): `C ω(Δ)` replaces Heilman's `C √Δ`. -/
+`eldan-proof.tex`): the rate of Eldan's estimate (`gaussian_main`). -/
 noncomputable def sqrtLog (x : ℝ) : ℝ := √(clip01 x * Real.log (exp 1 / clip01 x))
 
 /-- The truncation `x ↦ max 0 (min 1 x)` to `[0, 1]`. -/

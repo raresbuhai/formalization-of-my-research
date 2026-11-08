@@ -41,7 +41,7 @@ Formally (`BGHKLMM26.max2lin_approximation`):
 enough `d`, no polynomial-time algorithm distinguishes graphs of maximum degree at most `d` with
 Max-Cut value at least `c* - O(1/d)` from those with value at most `s* + O(log² d / d)`. Here
 `c* = (1 - ρ*) / 2` and `s* = arccos ρ* / π` for the minimizer `ρ*` of the Goemans–Williamson ratio.
-The formal statement is this one, with `O(log² d / d)`.
+The formal statement is stronger, with `O(log d / d)` in place of `O(log² d / d)`.
 
 Formally (`BGHKLMM26.maxCut_hardness`):
 
@@ -60,10 +60,11 @@ Formally (`BGHKLMM26.maxCut_hardness`):
 * **Graphs** are simple and unweighted, encoded by their number of vertices and adjacency table
   (`BGHKLMM26.encGraph`). The Max-Cut value is the largest fraction of edges crossing a cut.
 * **Constants.** One `C` and one `d₀` serve every `d ≥ d₀`: the yes-instances have value at least
-  `c* - C/d` and the no-instances at most `s* + C log² d / d` (natural logarithm). The paper
-  proves this through the robust inverse of Borell's theorem by Heilman; the formal proof uses
-  Eldan's published estimate (Invent. Math. 2015) instead, with the multiscale union bound of
-  Lemma 6.6 starting at the scale `K log² d / d`.
+  `c* - C/d` and the no-instances at most `s* + C log d / d` (natural logarithm). The Gaussian
+  input is the robust form of Borell's inequality with error `C √Δ` (the paper's Lemma 7.4); the
+  proof derives it from Eldan's estimate (Invent. Math. 2015) and a local spectral argument at
+  the halfspace. With that error, the multiscale union bound of Lemma 6.6 can start at the scale
+  `K log d / d`, which gives `log d / d`.
 * **`ρ*`.** The statement holds for every minimizer `ρ` of `gwRatio` on `[-1, 1)`;
   `BGHKLMM26.exists_unique_isGWMinimizer` shows that there is exactly one.
 
@@ -71,7 +72,8 @@ Formally (`BGHKLMM26.maxCut_hardness`):
 
 [BGHKLMM26, Corollary 1.3]: assuming the Unique Games Conjecture, no polynomial-time algorithm
 approximates Max-Cut within `α_GW + Ω(log² d / d)` in graphs of maximum degree `d`, unless
-`NP ⊆ BPP`. The formal statement has the paper's `log² d`, as Theorem 1.2.
+`NP ⊆ BPP`. As for Theorem 1.2, the formal statement is stronger, with `log d` in place of
+`log² d`.
 
 Formally (`BGHKLMM26.maxCut_inapproximability`):
 
@@ -80,9 +82,9 @@ Formally (`BGHKLMM26.maxCut_inapproximability`):
   `(N + 2)^k` coins. Graphs are given as Max 2-LIN(2) instances whose constraints are all
   `xᵢ xⱼ = -1` with weight `1` (`BGHKLMM26.IsMaxCutInstance`), so an assignment is a cut and its
   value is the number of edges it cuts. The corollary is then the converse of Theorem 1.1: its
-  gain `c / (d log d)` cannot be raised to `C log² d / d`, even on unweighted graphs.
+  gain `c / (d log d)` cannot be raised to `C log d / d`, even on unweighted graphs.
 * **Constants.** One `C` and one `d₀` serve every `d ≥ d₀`, and the algorithm may depend on `d`:
-  for each such `d`, an algorithm with expected value at least `(α_GW + C log² d / d) opt` on all
+  for each such `d`, an algorithm with expected value at least `(α_GW + C log d / d) opt` on all
   graphs of maximum degree at most `d` puts `NP` in `BPP`.
 * **Other readings.** An algorithm that reaches the ratio with probability `2/3` gives one with
   the expected guarantee for a slightly smaller ratio, by repeating it and keeping the best cut, so
@@ -107,11 +109,12 @@ Formally (`BGHKLMM26.maxCut_integrality_gap`):
   the edges of `‖vᵢ - vⱼ‖² / 4 = (1 - ⟨vᵢ, vⱼ⟩) / 2` (`BGHKLMM26.sdpValue`), normalized like the
   Max-Cut value. "The optimal SDP value is at least `c* - C/d`" is stated by exhibiting a solution
   with that value.
-* **The integrality gap.** The last clause, `MaxCut(H) ≤ (α_GW + C log² d / d) · SDP`, is the
+* **The integrality gap.** The last clause, `MaxCut(H) ≤ (α_GW + C log d / d) · SDP`, is the
   paper's "consequently"; it follows from the other two.
-* **Constants** as in Theorem 1.2, with the paper's `log² d`: the soundness is that of the
-  reduction of Theorem 1.2, applied to the Unique Games integrality gap instances of Khot and
-  Vishnoi [KV15] instead of to the instances of the Unique Games Conjecture.
+* **Constants** as in Theorem 1.2, with `log d / d` in place of the paper's `log² d / d`: the
+  soundness is that of the reduction of Theorem 1.2, applied to the Unique Games integrality gap
+  instances of Khot and Vishnoi [KV15] instead of to the instances of the Unique Games
+  Conjecture.
 -/
 
 public section
@@ -139,38 +142,38 @@ theorem max2lin_approximation :
 
 /-- **Theorem 1.2** of [BGHKLMM26]: assuming the Unique Games Conjecture, for every large enough
 `d`, no polynomial-time algorithm tells graphs of maximum degree at most `d` with Max-Cut value at
-least `c* - C/d` from those with value at most `s* + C log² d / d` with bounded error, unless
+least `c* - C/d` from those with value at most `s* + C log d / d` with bounded error, unless
 `NP ⊆ BPP`. -/
 theorem maxCut_hardness (hUGC : UGC) :
     ∃ (C : ℝ) (d₀ : ℕ), ∀ d : ℕ, d₀ ≤ d → ∀ ρ : ℝ, IsGWMinimizer ρ →
-      maxCutGap d ((1 - ρ) / 2 - C / d) (Real.arccos ρ / Real.pi + C * Real.log d ^ 2 / d) ∈
+      maxCutGap d ((1 - ρ) / 2 - C / d) (Real.arccos ρ / Real.pi + C * Real.log d / d) ∈
         PromiseBPP encGraph →
       ∀ (α : Type) (enc : α ↪ List Bool), NP enc ⊆ BPP enc :=
   sorry
 
 /-- **Corollary 1.3** of [BGHKLMM26]: assuming the Unique Games Conjecture, for every large enough
-`d`, a randomized polynomial-time algorithm whose expected cut is at least `(α_GW + C log² d / d)`
+`d`, a randomized polynomial-time algorithm whose expected cut is at least `(α_GW + C log d / d)`
 times the maximum cut on graphs of maximum degree at most `d` puts `NP` in `BPP`. -/
 theorem maxCut_inapproximability (hUGC : UGC) :
     ∃ (C : ℝ) (d₀ : ℕ), ∀ d : ℕ, d₀ ≤ d →
       ∀ (A : Instance × List Bool → List Bool) (k : ℕ), RunsInTime A (fun N ↦ (N + 2) ^ k) →
       (∀ I : Instance, Valid I → IsMaxCutInstance I → MaxDegreeLE I d →
-        (alphaGW + C * Real.log d ^ 2 / d) * opt I ≤
+        (alphaGW + C * Real.log d / d) * opt I ≤
           coinMean (((encInstance I).length + 2) ^ k) fun r ↦ outputWeight I (A (I, r))) →
       ∀ (α : Type) (enc : α ↪ List Bool), NP enc ⊆ BPP enc :=
   sorry
 
 /-- **Theorem 1.4** of [BGHKLMM26]: for every large enough `d` there is a graph of maximum degree
 at most `d` with a solution of the Goemans–Williamson SDP with triangle inequalities of value at
-least `c* - C/d` and Max-Cut value at most `s* + C log² d / d`, so that the integrality gap is at
-most `α_GW + C log² d / d`. -/
+least `c* - C/d` and Max-Cut value at most `s* + C log d / d`, so that the integrality gap is at
+most `α_GW + C log d / d`. -/
 theorem maxCut_integrality_gap :
     ∃ (C : ℝ) (d₀ : ℕ), ∀ d : ℕ, d₀ ≤ d → ∀ ρ : ℝ, IsGWMinimizer ρ →
       ∃ (H : Graph) (v : Fin H.1 → EuclideanSpace ℝ (Fin H.1)),
         MaxDegreeAtMost H d ∧ IsSDPSolution H.1 v ∧
         (1 - ρ) / 2 - C / d ≤ sdpValue H v ∧
-        maxCutValue H ≤ Real.arccos ρ / Real.pi + C * Real.log d ^ 2 / d ∧
-        maxCutValue H ≤ (alphaGW + C * Real.log d ^ 2 / d) * sdpValue H v :=
+        maxCutValue H ≤ Real.arccos ρ / Real.pi + C * Real.log d / d ∧
+        maxCutValue H ≤ (alphaGW + C * Real.log d / d) * sdpValue H v :=
   sorry
 
 end BGHKLMM26

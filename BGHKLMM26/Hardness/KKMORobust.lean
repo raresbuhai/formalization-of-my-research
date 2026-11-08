@@ -9,10 +9,10 @@ public import BGHKLMM26.Hardness.KKMORobustRegular
 /-!
 # The robust inverse of soundness
 
-[BGHKLMM26, Lemma 5.3], with the error of Remark 7.3: assuming the robust Majority is Stablest
-theorem (`BGHKLMM26.Hard.RobustMIS`), a cut of the KKMO graph of an instance of value at most `ε`
-that cuts at least `arccos ρ / π - η` has tables `f_v` within `C √(η log(1/η)) + ξ` of LTFs on
-average (`BGHKLMM26.Hard.kkmo_robust`).
+[BGHKLMM26, Lemma 5.3]: assuming the robust Majority is Stablest theorem
+(`BGHKLMM26.Hard.RobustMIS`), a cut of the KKMO graph of an instance of value at most `ε` that
+cuts at least `arccos ρ / π - η` has tables `f_v` within `C √η + ξ` of LTFs on average
+(`BGHKLMM26.Hard.kkmo_robust`).
 
 The paper applies Theorem 7.1 to `g_u`, which is smooth because its reduction adds noise. Here the
 reduction has no noise, the good left vertices are those whose `g_u` has small low-degree
@@ -20,7 +20,7 @@ influences (`BGHKLMM26.Hard.kkmo_few_bad`), and Theorem 7.1 is applied to the sm
 `T_{1-γ} g_u`, whose influences are then small, whose cut value is within `O(γ)` of that of `g_u`
 (`KKMORobustFourier`), and which still bounds the distance of the tables (Lemma bound-1,
 `KKMORobustRegular`). The averaging of Lemma bound-2 (Claims c-1 to c-3, Jensen's inequality for
-`√(z log(1/z))`) is `KKMORobustJensen`; the good vertices cut at most `arccos ρ / π + t` by Majority
+`√z`) is `KKMORobustJensen`; the good vertices cut at most `arccos ρ / π + t` by Majority
 is Stablest with low-degree influences (`BGHKLMM26.Hard.cut_le_of_lowInfluence`).
 
 Unlike the paper, `C` and `η₀` depend only on `ρ` (through Theorem 7.1), and all the error terms
@@ -77,18 +77,18 @@ end KKMORobust
 
 open KKMORobust
 
-/-- **Robust inverse of soundness** [BGHKLMM26, Lemma 5.3], Eldan form. -/
+/-- **Robust inverse of soundness** [BGHKLMM26, Lemma 5.3]. -/
 theorem kkmo_robust (hMIS : RobustMIS) {ρ : ℝ} (hρ1 : -1 < ρ) (hρ0 : ρ < 0) :
     ∃ C η₀ : ℝ, 0 < C ∧ 0 < η₀ ∧ η₀ < 1 ∧ ∀ ξ : ℝ, 0 < ξ → ∃ ε₁ : ℝ, 0 < ε₁ ∧
       ∀ ε : ℝ, 0 < ε → ε ≤ ε₁ → ∀ (R : ℕ) (G : UGInstance), Good R G → ugValue G ≤ ε →
         ∀ (f : ℕ → Cube (Fin R) → Bool) (η : ℝ), 0 ≤ η → η ≤ η₀ →
           Real.arccos ρ / Real.pi - η ≤ kkmoCut ρ R G.2.2.2 f →
           (∑ v ∈ range G.2.1, ltfDist (fun x ↦ bitVal (f v x))) / G.2.1 ≤
-            C * Real.sqrt (η * Real.log (1 / η)) + ξ := by
-  obtain ⟨CM, ηM, hCM, hηM, hηM1, hM⟩ := hMIS ρ hρ1 hρ0
+            C * Real.sqrt η + ξ := by
+  obtain ⟨CM, ηM, hCM, hηM, -, hM⟩ := hMIS ρ hρ1 hρ0
   refine ⟨CM + 1 / ηM, 1 / 4, by positivity, by norm_num, by norm_num, fun ξ hξ ↦ ?_⟩
   obtain ⟨τM, hτM, hM'⟩ := hM (ξ / 2) (by linarith)
-  obtain ⟨δ₀, hδ₀, hδ₀'⟩ := exists_sqrt_negMulLog_small (C := CM) (ε := ξ / 8) (by linarith)
+  obtain ⟨δ₀, hδ₀, hδ₀'⟩ := exists_sqrt_small (C := CM) (ε := ξ / 8) (by linarith)
   obtain ⟨t, htdef⟩ : ∃ t : ℝ, t = min (min (δ₀ / 4) (ηM * ξ / 16)) (min (ξ / 16) (1 / 40)) :=
     ⟨_, rfl⟩
   have ht0 : 0 < t := by rw [htdef]; positivity
@@ -119,8 +119,8 @@ theorem kkmo_robust (hMIS : RobustMIS) {ρ : ℝ} (hρ1 : -1 < ρ) (hρ0 : ρ < 
     (fun w ↦ cutValue ρ (g w)) (fun w ↦ cutValue ρ (noise u (g w)))
     (fun w ↦ ltfDist (noise u (g w))) (s := s) (η := η) (η₁ := ηM) (κ := t) (ν := t)
     (ξ₂ := t) (ξ' := ξ / 2) (CM := CM)
-    (by rw [hsdef]; positivity) hη0 hηM hηM1.le ht0.le ht0.le ht0.le (by linarith) hCM.le
-    (by linarith) (hfew ε hε hεε₁ R G hG hval f) hcut
+    (by rw [hsdef]; positivity) hη0 hηM ht0.le ht0.le ht0.le (by linarith) hCM.le
+    (hfew ε hε hεε₁ R G hG hval f) hcut
     (fun w _ ↦ by rw [← hut]; exact cutValue_noise_ge hρabs hu0 hu1 (hg w))
     (fun w _ ↦ cutValue_le_one hρabs.le (hTg w))
     (fun w _ ↦ ltfDist_le_one (hTg w))
@@ -139,17 +139,14 @@ theorem kkmo_robust (hMIS : RobustMIS) {ρ : ℝ} (hρ1 : -1 < ρ) (hρ0 : ρ < 
       have hZ1 : max 0 (s - cutValue ρ (noise u (g w))) ≤ ηM := max_le hηM.le (by linarith)
       have hZ2 : s - max 0 (s - cutValue ρ (noise u (g w))) ≤ cutValue ρ (noise u (g w)) := by
         have := le_max_right 0 (s - cutValue ρ (noise u (g w))); linarith
-      have := hM' R (noise u (g w)) (hTg w) hinf _ hZ0 hZ1 hZ2
-      rw [negMulLog_eq_mul_log_one_div]
-      exact this)
+      exact hM' R (noise u (g w)) (hTg w) hinf _ hZ0 hZ1 hZ2)
   have hright := avg_right_le hG hcs f hu0 hu1
   refine hright.trans (hbound.trans ?_)
   -- the final bookkeeping
-  rw [← negMulLog_eq_mul_log_one_div]
-  obtain ⟨X, hX⟩ : ∃ X, X = √(Real.negMulLog η) := ⟨_, rfl⟩
-  obtain ⟨Y, hY⟩ : ∃ Y, Y = √(Real.negMulLog (t + t + t)) := ⟨_, rfl⟩
+  obtain ⟨X, hX⟩ : ∃ X, X = √η := ⟨_, rfl⟩
+  obtain ⟨Y, hY⟩ : ∃ Y, Y = √(t + t + t) := ⟨_, rfl⟩
   rw [← hX, ← hY]
-  have hηX : η ≤ X := by rw [hX]; exact le_sqrt_negMulLog hη0 (by linarith)
+  have hηX : η ≤ X := by rw [hX]; exact Real.le_sqrt_self_iff.2 (by linarith)
   have hY' : CM * Y < ξ / 8 := by rw [hY]; exact hδ₀' _ (by linarith) (by linarith)
   have h1 : (η + (t + t + t)) / ηM = η / ηM + 3 * t / ηM := by ring
   have h2 : η / ηM ≤ X / ηM := div_le_div_of_nonneg_right hηX hηM.le
