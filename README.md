@@ -8,9 +8,12 @@ results stated in `Challenge.lean` and proved in `Solution.lean`:
 | [`BKS23`](BKS23) | Buhai, Kothari, Steurer. *Algorithms approaching the threshold for semi-random planted clique*. STOC 2023. [arXiv:2212.05619](https://arxiv.org/abs/2212.05619) |
 | [`BBKS24`](BBKS24) | Błasiok, Buhai, Kothari, Steurer. *Semirandom planted clique and the restricted isometry property*. FOCS 2024. [arXiv:2404.14159](https://arxiv.org/abs/2404.14159) |
 | [`BHSV25`](BHSV25) | Buhai, Hua, Steurer, Vári-Kakas. *Finding colorings in one-sided expanders*. [arXiv:2508.02825](https://arxiv.org/abs/2508.02825) |
-| [`BGHKLMM26`](BGHKLMM26) | Buhai, Ghoshal, Huang, Kothari, Lee, Makarychev, Makarychev. *Optimal algorithms and hardness for Max-Cut in bounded degree graphs*. [arXiv:2610.27216](https://arxiv.org/abs/2610.27216) |
 | [`BCFGJPSSV26`](BCFGJPSSV26) | Buhai, Cohen-Addad, Fleischmann, Gupta, Jubés Monforte, Pittu, Stouras, Svensson, Vogl. *A better-than-2 approximation for k-median*, Part I: *The power of general bids* and Part II: *Stable instances*. [arXiv:2610.18144](https://arxiv.org/abs/2610.18144), [arXiv:2610.17172](https://arxiv.org/abs/2610.17172) |
 | [`BMW26`](BMW26) | Buhai, Mazzali, Wrzos-Kaminska. *Efficient recovery of latent coordinate structure from sparse observations of the hypercube*. [arXiv:2610.11741](https://arxiv.org/abs/2610.11741) |
+| [`BGHKLMM26`](BGHKLMM26) | Buhai, Ghoshal, Huang, Kothari, Lee, Makarychev, Makarychev. *Optimal algorithms and hardness for Max-Cut in bounded degree graphs*. SODA 2027. [arXiv:2610.27216](https://arxiv.org/abs/2610.27216) |
+
+A folder is named by the paper's citation key when the paper is added and keeps that name, even if
+the paper later appears in a different year (`BGHKLMM26` appeared at SODA 2027).
 
 All papers live in one Lake package and share one version of Mathlib. Algorithms and their running
 times are formalized on top of

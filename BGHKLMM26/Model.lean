@@ -48,7 +48,7 @@ a reader has to check to know what the theorems say.
 
 Reference: [BGHKLMM26] R.-D. Buhai, S. Ghoshal, N. Huang, P. K. Kothari, E. Lee,
 K. Makarychev, Y. Makarychev, *Optimal Algorithms and Hardness for Max-Cut in Bounded Degree
-Graphs*, arXiv:2610.27216.
+Graphs*, SODA 2027, arXiv:2610.27216.
 -/
 
 @[expose] public section

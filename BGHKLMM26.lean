@@ -30,7 +30,7 @@ public import BGHKLMM26.IntGap.Main
 
 Formalization of R.-D. Buhai, S. Ghoshal, N. Huang, P. K. Kothari, E. Lee, K. Makarychev and
 Y. Makarychev, *Optimal Algorithms and Hardness for Max-Cut in Bounded Degree Graphs*,
-[arXiv:2610.27216](https://arxiv.org/abs/2610.27216).
+SODA 2027, [arXiv:2610.27216](https://arxiv.org/abs/2610.27216).
 
 * `BGHKLMM26/Challenge.lean`: the main results, stated without proof. This file and what it
   imports are all a reader needs to check.
