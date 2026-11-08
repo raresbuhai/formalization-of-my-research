@@ -11,6 +11,10 @@ public import Background.SumOfSquares.Normed
 public import Background.SumOfSquares.Boolean
 public import Background.SumOfSquares.Mixture
 public import Background.SumOfSquares.Moments
+public import Background.SumOfSquares.PseudoBounds
+public import Background.SumOfSquares.PowerSOS
+public import Background.SumOfSquares.Holder
+public import Background.SumOfSquares.IdealSOS
 public import Background.SumOfSquares.GridMoments
 public import Background.SumOfSquares.Lifted
 public import Background.SumOfSquares.PDTest

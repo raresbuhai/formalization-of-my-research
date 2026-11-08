@@ -1,0 +1,14 @@
+{
+  "challenge_module": "BS23.Challenge",
+  "solution_module": "BS23.Solution",
+  "theorem_names": [
+    "BS23.separating_bipartition",
+    "BS23.colinear_clustering",
+    "BS23.small_radius_clustering"
+  ],
+  "permitted_axioms": [
+    "propext",
+    "Quot.sound",
+    "Classical.choice"
+  ]
+}

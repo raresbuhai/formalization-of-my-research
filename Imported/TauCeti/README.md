@@ -26,3 +26,8 @@ Changes for our Mathlib:
 
 * `TauCeti/MeasureTheory/Measure/Real.lean`: `_root_.add_apply` (from a newer Mathlib) is
   `Measure.add_apply`.
+
+Also copied, at commit `86e4f6bb08bff4f2abd612594e77b8beb27049e3` and unchanged, two files that
+import only Mathlib: `TauCeti.Probability.Distributions.Gaussian.Moments` (the moments of the real
+Gaussian) and `TauCeti.Probability.Moments.Pi` (moments of sums under a product measure, and the
+weak law of large numbers in Chebyshev's form).

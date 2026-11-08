@@ -7,12 +7,15 @@ public import Complexity.Computability.Machines.Turing.MultiTape.Encodings.Lengt
 /-!
 # The algorithm is correct
 
-`SoS.Correct.core_correct`: on a valid problem and accuracies `η, γ > 0`, the algorithm with the
-budget `SoS.Solver.budget` outputs a correct answer (`SoS.Solver.Correct`).
+`SoS.Correct.core_correct_of_budget`: on a valid problem and accuracies `η, γ > 0`, the algorithm
+with every budget `L` that suffices (`SoS.Correct.BudgetOK`) outputs a correct answer
+(`SoS.Solver.Correct`). Every `L ≥ (n + m + 2)^(ℓ + 1), (|P| + 2)^min(m, ℓ)` suffices, for `n`
+variables and `m` constraints (`SoS.Correct.budgetOK_of_le`), and so does `SoS.Solver.budget`
+(`SoS.Correct.core_correct`).
 
 * **The budget suffices** for valid problems: the number of variables and the degree are not
   capped, and the budgeted lists of `Background/SumOfSquares/Algorithm/Core.lean` are the exact ones
-  (`SoS.Correct.ctx_eq`).
+  (`SoS.Correct.ctx_eq_of_budget`).
 * **Sizes.** Every quantity of the argument (moment bounds, coefficient norms, the accuracies) is
   between `2^-Z` and `2^(Z²)`, for the size `Z` of the input and the budget.
 * **The ellipsoid method** (`Ellipsoid.exists_feasible_le`) runs on the coordinates, with the
@@ -222,24 +225,90 @@ theorem card_le_of_mem_sets {σ K : Type*} [Field K] {A : System σ K} {ℓ : �
   rw [Finset.card_eq_sum_ones]
   exact (Finset.sum_le_sum fun i hi => Nat.one_le_iff_ne_zero.2 (hnc i hi)).trans hdeg
 
-/-- **The products are within the budget.** -/
-theorem prod_pick_le {P : Problem} (ηγ : ℚ × ℚ) :
+/-- **The products of the lengths of the constraints of a set** are at most `(|P| + 1)^min(m, ℓ)`,
+for `m` constraints and degree `ℓ`. -/
+theorem prod_pick_le_pow (P : Problem) :
     ∀ S ∈ sets (P.2.2.1.map (RawPoly.toPoly P.1)) P.2.1,
-      ((pick P.2.2.1 (ind S)).map List.length).prod ≤ budget (P, ηγ) := by
+      ((pick P.2.2.1 (ind S)).map List.length).prod ≤
+        ((encProblem P).length + 1) ^ min P.2.2.1.length P.2.1 := by
   intro S hS
   have hlen : ∀ k ∈ (pick P.2.2.1 (ind S)).map List.length, k ≤ (encProblem P).length := by
     intro k hk
     obtain ⟨f, hf, rfl⟩ := List.mem_map.1 hk
     exact (length_le_encRaw f).trans (length_encRaw_le_of_mem (mem_pick hf))
+  have hcard : S.card ≤ min P.2.2.1.length P.2.1 := by
+    refine le_min ?_ (card_le_of_mem_sets hS)
+    calc S.card ≤ Fintype.card (Fin (P.2.2.1.map (RawPoly.toPoly P.1)).length) :=
+          Finset.card_le_univ S
+      _ = P.2.2.1.length := by simp
   calc ((pick P.2.2.1 (ind S)).map List.length).prod
       ≤ (encProblem P).length ^ ((pick P.2.2.1 (ind S)).map List.length).length :=
         List.prod_le_pow_length _ _ hlen
-    _ ≤ ((encProblem P).length + 1) ^ P.2.1 := by
+    _ ≤ ((encProblem P).length + 1) ^ min P.2.2.1.length P.2.1 := by
         rw [List.length_map, length_pick _ (by simp) S]
         calc (encProblem P).length ^ S.card ≤ ((encProblem P).length + 1) ^ S.card :=
               Nat.pow_le_pow_left (by omega) _
-          _ ≤ _ := Nat.pow_le_pow_right (by omega) (card_le_of_mem_sets hS)
-    _ ≤ budget (P, ηγ) := le_budget ηγ le_rfl _ (by omega)
+          _ ≤ _ := Nat.pow_le_pow_right (by omega) hcard
+
+/-- **The products are within the budget.** -/
+theorem prod_pick_le {P : Problem} (ηγ : ℚ × ℚ) :
+    ∀ S ∈ sets (P.2.2.1.map (RawPoly.toPoly P.1)) P.2.1,
+      ((pick P.2.2.1 (ind S)).map List.length).prod ≤ budget (P, ηγ) := fun S hS =>
+  (prod_pick_le_pow P S hS).trans (le_budget ηγ le_rfl _ (by omega))
+
+/-- **A budget `L` that suffices** for the problem `P`: it covers the degree and the monomials in
+the variables and in the constraints (`SoS.Core.Enough`), and the products of the lengths of the
+constraints of every set (`SoS.Core.setDataSpec`). With such a budget nothing is cut
+(`SoS.Correct.ctx_eq_of_budget`), and the algorithm is correct
+(`SoS.Correct.core_correct_of_budget`). -/
+structure BudgetOK (P : Problem) (L : ℕ) : Prop where
+  enough : Enough L P.1 (degs P).length P.2.1
+  prod : ∀ S ∈ sets (P.2.2.1.map (RawPoly.toPoly P.1)) P.2.1,
+    ((pick P.2.2.1 (ind S)).map List.length).prod ≤ L
+
+/-- `SoS.Solver.budget` suffices. -/
+theorem budgetOK_budget {P : Problem} (hP : P.Valid) (ηγ : ℚ × ℚ) :
+    BudgetOK P (budget (P, ηγ)) :=
+  ⟨enough hP ηγ, prod_pick_le ηγ⟩
+
+theorem BudgetOK.numVars_le {P : Problem} (hP : P.Valid) {L : ℕ} (hL : BudgetOK P L) :
+    P.1 ≤ L := by
+  have h2 : 2 ≤ P.2.1 := hP.2.1
+  calc P.1 ≤ (P.1 + 1) ^ 1 := by rw [pow_one]; omega
+    _ ≤ (P.1 + 1) ^ P.2.1 := Nat.pow_le_pow_right (by omega) (by omega)
+    _ ≤ L := hL.enough.vars
+
+/-- **A budget that suffices**: `L ≥ (n + m + 2)^(ℓ + 1)` and `L ≥ (|P| + 2)^min(m, ℓ)`, for `n`
+variables, `m` constraints and degree `ℓ`. -/
+theorem budgetOK_of_le {P : Problem} {L : ℕ}
+    (h1 : (P.1 + P.2.2.1.length + 2) ^ (P.2.1 + 1) ≤ L)
+    (h2 : ((encProblem P).length + 2) ^ min P.2.2.1.length P.2.1 ≤ L) : BudgetOK P L := by
+  have hpow : ∀ a ≤ P.1 + P.2.2.1.length + 1, (a + 1) ^ P.2.1 ≤ L := fun a ha =>
+    calc (a + 1) ^ P.2.1 ≤ (P.1 + P.2.2.1.length + 2) ^ P.2.1 := Nat.pow_le_pow_left (by omega) _
+      _ ≤ (P.1 + P.2.2.1.length + 2) ^ (P.2.1 + 1) := Nat.pow_le_pow_right (by omega) (by omega)
+      _ ≤ L := h1
+  refine ⟨⟨?_, hpow _ (by omega), hpow _ (by simp only [degs, List.length_map]; omega)⟩,
+    fun S hS => (prod_pick_le_pow P S hS).trans ((Nat.pow_le_pow_left (by omega) _).trans h2)⟩
+  calc P.2.1 ≤ 2 ^ P.2.1 := (Nat.lt_two_pow_self).le
+    _ = (1 + 1) ^ P.2.1 := by norm_num
+    _ ≤ L := hpow 1 (by omega)
+
+/-- **The context, for a valid problem and a budget that suffices**: nothing is cut. -/
+theorem ctx_eq_of_budget {P : Problem} (hP : P.Valid) (ηγ : ℚ × ℚ) {L : ℕ} (hL : BudgetOK P L) :
+    ctx ((P, ηγ), L) = (P.1, coordsL P.1 P.2.1 (degs P), Mono.all P.1 (P.2.1 / 2),
+      setData P.1 P.2.1 (degs P) (fun v => prodRaw P.1 L (pick P.2.2.1 v))
+        (fun v => ((pick P.2.2.1 v).map (normSq P.1)).prod),
+      P.2.2.2.1, P.2.2.2.2, ηγ.1 + ηγ.2 / 2,
+      1 / 2 ^ (16 * sizeZ (P, ηγ) L ^ 4),
+      2 ^ (3 * sizeZ (P, ηγ) L ^ 2 + 1)) := by
+  have he := hL.enough
+  have hn : min L P.1 = P.1 := min_eq_right (hL.numVars_le hP)
+  have hl : min L P.2.1 = P.2.1 := min_eq_right he.deg
+  have he' : Enough L P.1 0 P.2.1 :=
+    ⟨he.deg, he.vars, by simpa using (Nat.one_le_pow _ _ (Nat.succ_pos _)).trans he.vars⟩
+  have hds : P.2.2.1.map (degCap P.1 (P.2.1 + 1)) = degs P := rfl
+  simp only [ctx, hn, hl, hds]
+  rw [coordsB_eq he, allB_eq_of_le he' (Nat.div_le_self _ _), setDataB_eq he]
 
 /-- **The context, for a valid problem**: nothing is cut. -/
 theorem ctx_eq {P : Problem} (hP : P.Valid) (ηγ : ℚ × ℚ) :
@@ -248,15 +317,8 @@ theorem ctx_eq {P : Problem} (hP : P.Valid) (ηγ : ℚ × ℚ) :
         (fun v => ((pick P.2.2.1 v).map (normSq P.1)).prod),
       P.2.2.2.1, P.2.2.2.2, ηγ.1 + ηγ.2 / 2,
       1 / 2 ^ (16 * sizeZ (P, ηγ) (budget (P, ηγ)) ^ 4),
-      2 ^ (3 * sizeZ (P, ηγ) (budget (P, ηγ)) ^ 2 + 1)) := by
-  have he := enough hP ηγ
-  have hn : min (budget (P, ηγ)) P.1 = P.1 := min_eq_right (numVars_le_budget hP ηγ)
-  have hl : min (budget (P, ηγ)) P.2.1 = P.2.1 := min_eq_right he.deg
-  have he' : Enough (budget (P, ηγ)) P.1 0 P.2.1 :=
-    ⟨he.deg, he.vars, by simpa using (Nat.one_le_pow _ _ (Nat.succ_pos _)).trans he.vars⟩
-  have hds : P.2.2.1.map (degCap P.1 (P.2.1 + 1)) = degs P := rfl
-  simp only [ctx, hn, hl, hds]
-  rw [coordsB_eq he, allB_eq_of_le he' (Nat.div_le_self _ _), setDataB_eq he]
+      2 ^ (3 * sizeZ (P, ηγ) (budget (P, ηγ)) ^ 2 + 1)) :=
+  ctx_eq_of_budget hP ηγ (budgetOK_budget hP ηγ)
 
 /-! ### Sizes of numbers -/
 
@@ -553,10 +615,10 @@ theorem sum_sq_obj_le (P : Problem) :
 
 section Run
 
-variable (P : Problem) (η γ : ℚ)
+variable (P : Problem) (η γ : ℚ) (L : ℕ)
 
 /-- The size `Z`. -/
-def Zof : ℕ := sizeZ (P, η, γ) (budget (P, η, γ))
+def Zof : ℕ := sizeZ (P, η, γ) L
 
 /-- The coordinates. -/
 def csOf : List Crd := coordsL P.1 P.2.1 (degs P)
@@ -566,56 +628,56 @@ def Nof : ℕ := (csOf P).length
 
 /-- The data of the sets. -/
 def sdOf : List SetData := setData P.1 P.2.1 (degs P)
-  (fun v => prodRaw P.1 (budget (P, η, γ)) (pick P.2.2.1 v))
+  (fun v => prodRaw P.1 L (pick P.2.2.1 v))
   (fun v => ((pick P.2.2.1 v).map (normSq P.1)).prod)
 
 /-- `τ`. -/
-def τOf : ℚ := 1 / 2 ^ (16 * Zof P η γ ^ 4)
+def τOf : ℚ := 1 / 2 ^ (16 * Zof P η γ L ^ 4)
 
 /-- `R`. -/
-def ROf : ℚ := 2 ^ (3 * Zof P η γ ^ 2 + 1)
+def ROf : ℚ := 2 ^ (3 * Zof P η γ L ^ 2 + 1)
 
 /-- The oracle. -/
 def orcOf : List ℚ → Bool × List ℚ :=
-  oracle P.1 (csOf P) (Mono.all P.1 (P.2.1 / 2)) (sdOf P η γ) P.2.2.2.1 P.2.2.2.2 (η + γ / 2)
-    (τOf P η γ) (ROf P η γ)
+  oracle P.1 (csOf P) (Mono.all P.1 (P.2.1 / 2)) (sdOf P L) P.2.2.2.1 P.2.2.2.2 (η + γ / 2)
+    (τOf P η γ L) (ROf P η γ L)
 
 /-- The objective. -/
 def objOf : List ℚ → ℚ := objVal P.1 (csOf P) P.2.2.2.1 P.2.2.2.2
 
 /-- The state after `k` steps. -/
 def stOf (k : ℕ) : State :=
-  run (Nof P) (expP (Zof P η γ) (Nof P)) (2 ^ expB (Zof P η γ) (Nof P)) (orcOf P η γ) (objOf P)
-    (List.replicate (Nof P) 0) (shape₀ (Nof P) (2 ^ (8 * Zof P η γ ^ 2))) k
+  run (Nof P) (expP (Zof P η γ L) (Nof P)) (2 ^ expB (Zof P η γ L) (Nof P)) (orcOf P η γ L)
+    (objOf P) (List.replicate (Nof P) 0) (shape₀ (Nof P) (2 ^ (8 * Zof P η γ L ^ 2))) k
 
 /-- The number of steps. -/
-def Kof : ℕ := expK (Zof P η γ) (Nof P)
+def Kof : ℕ := expK (Zof P η γ L) (Nof P)
 
-variable {P}
+variable {P L}
 
-theorem finalState_eq (hP : P.Valid) :
-    finalState ((P, η, γ), budget (P, η, γ)) = stOf P η γ (Kof P η γ) := by
-  have h := ctx_eq hP (η, γ)
+theorem finalState_eq (hP : P.Valid) (hbud : BudgetOK P L) :
+    finalState ((P, η, γ), L) = stOf P η γ L (Kof P η γ L) := by
+  have h := ctx_eq_of_budget hP (η, γ) hbud
   simp only [finalState, stOf, Kof, Nof, csOf, ctxOracle, ctxObj, orcOf, objOf, sdOf, τOf, ROf,
     Zof, h]
 
-theorem core_eq (hP : P.Valid) :
-    core ((P, η, γ), budget (P, η, γ)) = outputL (budget (P, η, γ)) P.1 P.2.1 (csOf P)
-      (if (stOf P η γ (Kof P η γ)).2.2.1 then (stOf P η γ (Kof P η γ)).2.2.2
-        else List.replicate (Nof P) 0) (1 / 2 ^ (8 * Zof P η γ ^ 2)) := by
-  have h := ctx_eq hP (η, γ)
-  have hl : min (budget (P, η, γ)) P.2.1 = P.2.1 := min_eq_right (enough hP (η, γ)).deg
-  rw [core, finalState_eq η γ hP]
+theorem core_eq (hP : P.Valid) (hbud : BudgetOK P L) :
+    core ((P, η, γ), L) = outputL L P.1 P.2.1 (csOf P)
+      (if (stOf P η γ L (Kof P η γ L)).2.2.1 then (stOf P η γ L (Kof P η γ L)).2.2.2
+        else List.replicate (Nof P) 0) (1 / 2 ^ (8 * Zof P η γ L ^ 2)) := by
+  have h := ctx_eq_of_budget hP (η, γ) hbud
+  have hl : min L P.2.1 = P.2.1 := min_eq_right hbud.enough.deg
+  rw [core, finalState_eq η γ hP hbud]
   simp only [h, hl, Nof, csOf, Zof]
 
-theorem stOf_succ (k : ℕ) : stOf P η γ (k + 1) =
-    loopStep (Nof P) (expP (Zof P η γ) (Nof P)) (2 ^ expB (Zof P η γ) (Nof P)) (orcOf P η γ)
-      (objOf P) (stOf P η γ k) := run_succ _ _ _ _ _ _ _ _
+theorem stOf_succ (k : ℕ) : stOf P η γ L (k + 1) =
+    loopStep (Nof P) (expP (Zof P η γ L) (Nof P)) (2 ^ expB (Zof P η γ L) (Nof P)) (orcOf P η γ L)
+      (objOf P) (stOf P η γ L k) := run_succ _ _ _ _ _ _ _ _
 
 /-- The lengths along the run. -/
-theorem lengths_stOf (k : ℕ) : (stOf P η γ k).1.length = Nof P ∧
-    (stOf P η γ k).2.1.length = Nof P ∧ (∀ row ∈ (stOf P η γ k).2.1, row.length = Nof P) ∧
-    (stOf P η γ k).2.2.2.length = Nof P := by
+theorem lengths_stOf (k : ℕ) : (stOf P η γ L k).1.length = Nof P ∧
+    (stOf P η γ L k).2.1.length = Nof P ∧ (∀ row ∈ (stOf P η γ L k).2.1, row.length = Nof P) ∧
+    (stOf P η γ L k).2.2.2.length = Nof P := by
   induction k with
   | zero =>
     refine ⟨by simp [stOf, run], by simp [stOf, run, shape₀], fun row hrow => ?_,
@@ -1009,7 +1071,7 @@ end Parameters
 
 section Sizes
 
-variable {P : Problem} {η γ : ℚ}
+variable {P : Problem} {η γ : ℚ} {L : ℕ}
 
 theorem length_encInput (P : Problem) (η γ : ℚ) : (encInput (P, η, γ)).length =
     2 * (encProblem P).length + 1 + (2 * (encRat η).length + 1 + (encRat γ).length) := by
@@ -1017,21 +1079,21 @@ theorem length_encInput (P : Problem) (η γ : ℚ) : (encInput (P, η, γ)).len
   simp only [SoS.PolyTime.encInputM, Turing.MultiTapeTM.length_encPair]
   rw [length_encProblem]
 
-theorem Zof_eq (P : Problem) (η γ : ℚ) :
-    Zof P η γ = (encInput (P, η, γ)).length + budget (P, η, γ) + 4 := rfl
+theorem Zof_eq (P : Problem) (η γ : ℚ) (L : ℕ) :
+    Zof P η γ L = (encInput (P, η, γ)).length + L + 4 := rfl
 
-theorem four_le_Zof : 4 ≤ Zof P η γ := by rw [Zof_eq]; omega
+theorem four_le_Zof : 4 ≤ Zof P η γ L := by rw [Zof_eq]; omega
 
-theorem lenP_le_Zof : (encProblem P).length ≤ Zof P η γ := by
+theorem lenP_le_Zof : (encProblem P).length ≤ Zof P η γ L := by
   rw [Zof_eq, length_encInput]; omega
 
-theorem budget_le_Zof : budget (P, η, γ) + 4 ≤ Zof P η γ := by rw [Zof_eq]; omega
+theorem budget_le_Zof : L + 4 ≤ Zof P η γ L := by rw [Zof_eq]; omega
 
-theorem η_le_Zof : (η : ℝ) ≤ 2 ^ Zof P η γ := by
+theorem η_le_Zof : (η : ℝ) ≤ 2 ^ Zof P η γ L := by
   refine (le_abs_self _).trans ((abs_le_two_pow_length η).trans (two_pow_le ?_))
   rw [Zof_eq, length_encInput]; omega
 
-theorem γ_ge_Zof (hγ : 0 < γ) : 1 / 2 ^ Zof P η γ ≤ (γ : ℝ) := by
+theorem γ_ge_Zof (hγ : 0 < γ) : 1 / 2 ^ Zof P η γ L ≤ (γ : ℝ) := by
   refine le_trans ?_ (two_pow_inv_le hγ)
   refine one_div_le_one_div_of_le (two_pow_pos' _) (two_pow_le ?_)
   rw [Zof_eq, length_encInput]; omega
@@ -1058,14 +1120,14 @@ theorem length_coordsL_le (n ℓ : ℕ) (ds : List ℕ) :
     _ ≤ (n + 1) ^ ℓ + (ds.length + 1) ^ ℓ * (n + 1) ^ ℓ := by gcongr
     _ = _ := by ring
 
-theorem Nof_le (hP : P.Valid) : Nof P ≤ Zof P η γ ^ 2 := by
-  have he := enough hP (η, γ)
-  have hL := budget_le_Zof (P := P) (η := η) (γ := γ)
+theorem Nof_le (hbud : BudgetOK P L) : Nof P ≤ Zof P η γ L ^ 2 := by
+  have he := hbud.enough
+  have hL := budget_le_Zof (P := P) (η := η) (γ := γ) (L := L)
   have h := length_coordsL_le P.1 P.2.1 (degs P)
   rw [Nof, csOf]
   calc _ ≤ (P.1 + 1) ^ P.2.1 * (1 + ((degs P).length + 1) ^ P.2.1) := h
-    _ ≤ budget (P, η, γ) * (1 + budget (P, η, γ)) := by gcongr <;> [exact he.vars; exact he.cons]
-    _ ≤ Zof P η γ * Zof P η γ := by gcongr <;> omega
+    _ ≤ L * (1 + L) := by gcongr <;> [exact he.vars; exact he.cons]
+    _ ≤ Zof P η γ L * Zof P η γ L := by gcongr <;> omega
     _ = _ := by ring
 
 end Sizes
@@ -1076,7 +1138,7 @@ section Main
 
 open Matrix
 
-variable {P : Problem} {η γ : ℚ}
+variable {P : Problem} {η γ : ℚ} {L : ℕ}
 
 theorem length_orDef (a : List ℚ) : (orDef a).length = a.length := by
   unfold orDef
@@ -1108,7 +1170,7 @@ theorem length_of_mem_cuts {n : ℕ} {cs : List Crd} {msY : List (List ℕ)} {sd
     · rw [List.mem_singleton.1 ha, length_orDef, length_dense]
     · simp at ha
 
-theorem length_orcOf {c : List ℚ} (hc : c.length = Nof P) : (orcOf P η γ c).2.length = Nof P := by
+theorem length_orcOf {c : List ℚ} (hc : c.length = Nof P) : (orcOf P η γ L c).2.length = Nof P := by
   unfold orcOf oracle
   split_ifs with hempty
   · rw [length_orDef, length_dense]; rfl
@@ -1131,10 +1193,10 @@ theorem abs_coeff_le_coeffNorm1 {σ : Type*} (p : MvPolynomial σ ℝ) (s : σ �
     exact coeffNorm1_nonneg p
 
 /-- **The moments of a competitor** are at most `2^(Z²)`. -/
-theorem moment_bound (hP : P.Valid) (hη : 0 ≤ (η : ℝ))
+theorem moment_bound (hP : P.Valid) (hbud : BudgetOK P L) (hη : 0 ≤ (η : ℝ))
     (E' : PseudoExpectation (Fin P.1) P.2.1) (hE' : E'.ApproxSatisfies P.system (η : ℝ) 0)
     (m : Fin P.1 →₀ ℕ) (hm : m.degree ≤ P.2.1) :
-    |E' (monomial m 1)| ≤ 2 ^ (Zof P η γ ^ 2) := by
+    |E' (monomial m 1)| ≤ 2 ^ (Zof P η γ L ^ 2) := by
   obtain ⟨hev, -, -, ⟨B, hB⟩, -⟩ := id hP
   have h := PseudoExpectation.abs_apply_monomial_le hev E' hη hE' hB hm
   obtain ⟨f, hf, hfB⟩ := List.mem_map.1 hB
@@ -1156,13 +1218,13 @@ theorem moment_bound (hP : P.Valid) (hη : 0 ≤ (η : ℝ))
   have hnorm : coeffNorm (toReal g) ≤ 2 ^ (encProblem P).length :=
     (coeffNorm_le_coeffNorm1 _).trans hg1
   have hηle : (η : ℝ) ≤ 2 ^ (encRat η).length := (le_abs_self _).trans (abs_le_two_pow_length η)
-  have hlen : (encProblem P).length + (encRat η).length + 2 ≤ Zof P η γ := by
+  have hlen : (encProblem P).length + (encRat η).length + 2 ≤ Zof P η γ L := by
     rw [Zof_eq, length_encInput]; omega
-  have hℓ : P.2.1 / 2 ≤ Zof P η γ := by
-    have := budget_le_Zof (P := P) (η := η) (γ := γ)
-    have := (enough hP (η, γ)).deg
+  have hℓ : P.2.1 / 2 ≤ Zof P η γ L := by
+    have := budget_le_Zof (P := P) (η := η) (γ := γ) (L := L)
+    have := hbud.enough.deg
     omega
-  have hbase : 1 + |algebraMap ℚ ℝ B| + (η : ℝ) * coeffNorm (toReal g) ≤ 2 ^ Zof P η γ := by
+  have hbase : 1 + |algebraMap ℚ ℝ B| + (η : ℝ) * coeffNorm (toReal g) ≤ 2 ^ Zof P η γ L := by
     calc 1 + |algebraMap ℚ ℝ B| + (η : ℝ) * coeffNorm (toReal g)
         ≤ 2 ^ (encProblem P).length + 2 ^ (encProblem P).length +
             2 ^ (encRat η).length * 2 ^ (encProblem P).length :=
@@ -1176,17 +1238,17 @@ theorem moment_bound (hP : P.Valid) (hη : 0 ≤ (η : ℝ))
           rw [pow_add 2 _ 2, e2, show (2 : ℝ) ^ 2 = 4 by norm_num]
           have e3 : (0 : ℝ) ≤ 2 ^ ((encProblem P).length + (encRat η).length) := by positivity
           linarith
-      _ ≤ 2 ^ Zof P η γ := two_pow_le hlen
+      _ ≤ 2 ^ Zof P η γ L := two_pow_le hlen
   calc |E' (monomial m 1)| ≤ _ := h
-    _ ≤ (2 ^ Zof P η γ) ^ (P.2.1 / 2) :=
+    _ ≤ (2 ^ Zof P η γ L) ^ (P.2.1 / 2) :=
         pow_le_pow_left₀ (add_nonneg (add_nonneg zero_le_one (abs_nonneg _))
           (mul_nonneg hη (coeffNorm_nonneg _))) hbase _
-    _ ≤ (2 ^ Zof P η γ) ^ Zof P η γ := pow_le_pow_right₀ (one_le_pow₀ (by norm_num)) hℓ
-    _ = 2 ^ (Zof P η γ ^ 2) := by rw [← pow_mul, sq]
+    _ ≤ (2 ^ Zof P η γ L) ^ Zof P η γ L := pow_le_pow_right₀ (one_le_pow₀ (by norm_num)) hℓ
+    _ = 2 ^ (Zof P η γ L ^ 2) := by rw [← pow_mul, sq]
 
 /-- The set the cuts keep. -/
-def CSet (P : Problem) (η γ : ℚ) : Set (Fin (Nof P) → ℝ) :=
-  {x | InSet P.system P.2.1 ((η + γ / 2 : ℚ) : ℝ) ((τOf P η γ : ℝ) / 2) (ROf P η γ)
+def CSet (P : Problem) (η γ : ℚ) (L : ℕ) : Set (Fin (Nof P) → ℝ) :=
+  {x | InSet P.system P.2.1 ((η + γ / 2 : ℚ) : ℝ) ((τOf P η γ L : ℝ) / 2) (ROf P η γ L)
     (x ∘ equiv (degsSpec P))}
 
 /-- The objective on the coordinates. -/
@@ -1202,33 +1264,33 @@ theorem fObj_vecL (P : Problem) (l : List ℚ) : fObj P (vecL (Nof P) l) = (objO
   rw [fObj, ← pt_eq, objOf, obj_pt]
   rfl
 
-theorem setDataSpec_of :
-    SetDataSpec P.system P.2.1 (fun v => prodRaw P.1 (budget (P, η, γ)) (pick P.2.2.1 v))
+theorem setDataSpec_of (hbud : BudgetOK P L) :
+    SetDataSpec P.system P.2.1 (fun v => prodRaw P.1 L (pick P.2.2.1 v))
       (fun v => ((pick P.2.2.1 v).map (normSq P.1)).prod) :=
-  setDataSpec P.1 P.2.1 _ P.2.2.1 (prod_pick_le (η, γ))
+  setDataSpec P.1 P.2.1 _ P.2.2.1 hbud.prod
 
 /-- **The oracle on the run**, from `SoS.Oracle.oracle_spec`. -/
-theorem orc_spec (hP : P.Valid) (hN : 0 < Nof P) (k : ℕ) :
-    let r := orcOf P η γ (stOf P η γ k).1
+theorem orc_spec (hP : P.Valid) (hbud : BudgetOK P L) (hN : 0 < Nof P) (k : ℕ) :
+    let r := orcOf P η γ L (stOf P η γ L k).1
     vecL (Nof P) r.2 ≠ 0 ∧
-      (r.1 = false → ∀ x ∈ CSet P η γ,
-        vecL (Nof P) r.2 ⬝ᵥ (x - vecL (Nof P) (stOf P η γ k).1) ≤ 0) ∧
-      (r.1 = true → InSet P.system P.2.1 ((η + γ / 2 : ℚ) : ℝ) (τOf P η γ) (ROf P η γ)
-          (pt (degsSpec P) (stOf P η γ k).1) ∧
-        ∀ x ∈ Set.univ, fObj P x < fObj P (vecL (Nof P) (stOf P η γ k).1) →
-          vecL (Nof P) r.2 ⬝ᵥ (x - vecL (Nof P) (stOf P η γ k).1) ≤ 0) := by
+      (r.1 = false → ∀ x ∈ CSet P η γ L,
+        vecL (Nof P) r.2 ⬝ᵥ (x - vecL (Nof P) (stOf P η γ L k).1) ≤ 0) ∧
+      (r.1 = true → InSet P.system P.2.1 ((η + γ / 2 : ℚ) : ℝ) (τOf P η γ L) (ROf P η γ L)
+          (pt (degsSpec P) (stOf P η γ L k).1) ∧
+        ∀ x ∈ Set.univ, fObj P x < fObj P (vecL (Nof P) (stOf P η γ L k).1) →
+          vecL (Nof P) r.2 ⬝ᵥ (x - vecL (Nof P) (stOf P η γ L k).1) ≤ 0) := by
   intro r
-  have hτ : (0 : ℚ) < τOf P η γ := by unfold τOf; positivity
-  have h := oracle_spec (degsSpec P) (setDataSpec_of (P := P) (η := η) (γ := γ)) hP.2.2.1 hτ
-    (η := η + γ / 2) (R := ROf P η γ) (c := (stOf P η γ k).1) (lengths_stOf η γ k).1 hN
+  have hτ : (0 : ℚ) < τOf P η γ L := by unfold τOf; positivity
+  have h := oracle_spec (degsSpec P) (setDataSpec_of hbud) hP.2.2.1 hτ
+    (η := η + γ / 2) (R := ROf P η γ L) (c := (stOf P η γ L k).1) (lengths_stOf (L := L) η γ k).1 hN
   obtain ⟨h1, h2, h3⟩ := h
-  have hdot : ∀ x : Fin (Nof P) → ℝ, vecL (Nof P) r.2 ⬝ᵥ (x - vecL (Nof P) (stOf P η γ k).1) =
-      pt (degsSpec P) r.2 ⬝ᵥ (x ∘ equiv (degsSpec P) - pt (degsSpec P) (stOf P η γ k).1) := by
+  have hdot : ∀ x : Fin (Nof P) → ℝ, vecL (Nof P) r.2 ⬝ᵥ (x - vecL (Nof P) (stOf P η γ L k).1) =
+      pt (degsSpec P) r.2 ⬝ᵥ (x ∘ equiv (degsSpec P) - pt (degsSpec P) (stOf P η γ L k).1) := by
     intro x
     rw [pt_eq, pt_eq]
     simp only [dotProduct, Function.comp, Pi.sub_apply]
     exact (Equiv.sum_comp (equiv (degsSpec P)) (fun j => vecL (Nof P) r.2 j *
-      (x j - vecL (Nof P) (stOf P η γ k).1 j))).symm
+      (x j - vecL (Nof P) (stOf P η γ L k).1 j))).symm
   refine ⟨fun h0 => h1 (by
     rw [pt_eq]
     change vecL (Nof P) r.2 ∘ equiv (degsSpec P) = 0
@@ -1250,21 +1312,23 @@ theorem abs_ys_sub_le {σ K : Type*} [Fintype σ] [DecidableEq σ] [Field K] {A 
   · exact hnear _
   all_goals simpa using hρ
 
-theorem τOf_cast (P : Problem) (η γ : ℚ) : (τOf P η γ : ℝ) = 1 / 2 ^ (16 * Zof P η γ ^ 4) := by
+theorem τOf_cast (P : Problem) (η γ : ℚ) (L : ℕ) :
+    (τOf P η γ L : ℝ) = 1 / 2 ^ (16 * Zof P η γ L ^ 4) := by
   simp [τOf]
 
-theorem ROf_cast (P : Problem) (η γ : ℚ) : (ROf P η γ : ℝ) = 2 ^ (3 * Zof P η γ ^ 2 + 1) := by
+theorem ROf_cast (P : Problem) (η γ : ℚ) (L : ℕ) :
+    (ROf P η γ L : ℝ) = 2 ^ (3 * Zof P η γ L ^ 2 + 1) := by
   simp [ROf]
 
-theorem numVars_pow_le (hP : P.Valid) :
-    ((Fintype.card (Fin P.1) : ℝ) + 1) ^ P.2.1 ≤ 2 ^ Zof P η γ := by
-  have he := (enough hP (η, γ)).vars
-  have hL := budget_le_Zof (P := P) (η := η) (γ := γ)
-  have h1 : (P.1 + 1) ^ P.2.1 ≤ Zof P η γ := by omega
+theorem numVars_pow_le (hbud : BudgetOK P L) :
+    ((Fintype.card (Fin P.1) : ℝ) + 1) ^ P.2.1 ≤ 2 ^ Zof P η γ L := by
+  have he := hbud.enough.vars
+  have hL := budget_le_Zof (P := P) (η := η) (γ := γ) (L := L)
+  have h1 : (P.1 + 1) ^ P.2.1 ≤ Zof P η γ L := by omega
   rw [Fintype.card_fin]
   calc ((P.1 : ℝ) + 1) ^ P.2.1 = (((P.1 + 1) ^ P.2.1 : ℕ) : ℝ) := by push_cast; ring
-    _ ≤ (Zof P η γ : ℝ) := by exact_mod_cast h1
-    _ ≤ 2 ^ Zof P η γ := cast_le_two_pow _
+    _ ≤ (Zof P η γ L : ℝ) := by exact_mod_cast h1
+    _ ≤ 2 ^ Zof P η γ L := cast_le_two_pow _
 
 theorem objective_eq (E' : PseudoExpectation (Fin P.1) P.2.1) :
     P.objective E' = E' (toReal (P.2.2.2.1.toPoly P.1)) +
@@ -1273,15 +1337,15 @@ theorem objective_eq (E' : PseudoExpectation (Fin P.1) P.2.1) :
   rfl
 
 /-- **A ball around every competitor.** -/
-theorem ball_ok (hP : P.Valid) (hη : 0 < η) (hγ : 0 < γ)
+theorem ball_ok (hP : P.Valid) (hbud : BudgetOK P L) (hη : 0 < η) (hγ : 0 < γ)
     (E' : PseudoExpectation (Fin P.1) P.2.1) (hE' : E'.ApproxSatisfies P.system (η : ℝ) 0) :
-    ∃ z : Fin (Nof P) → ℝ, ∀ x, (x - z) ⬝ᵥ (x - z) ≤ (1 / 2 ^ (32 * Zof P η γ ^ 4)) ^ 2 →
-      x ∈ CSet P η γ ∧ fObj P x ≤ P.objective E' + γ / 2 := by
+    ∃ z : Fin (Nof P) → ℝ, ∀ x, (x - z) ⬝ᵥ (x - z) ≤ (1 / 2 ^ (32 * Zof P η γ L ^ 4)) ^ 2 →
+      x ∈ CSet P η γ L ∧ fObj P x ≤ P.objective E' + γ / 2 := by
   classical
-  have hZ : 4 ≤ Zof P η γ := four_le_Zof
+  have hZ : 4 ≤ Zof P η γ L := four_le_Zof
   have hη0 : (0 : ℝ) ≤ η := by exact_mod_cast hη.le
   have hγ0 : (0 : ℝ) < γ := by exact_mod_cast hγ
-  have hlenP := lenP_le_Zof (P := P) (η := η) (γ := γ)
+  have hlenP := lenP_le_Zof (P := P) (η := η) (γ := γ) (L := L)
   have hq : ∀ q ∈ toReal (P.2.2.2.1.toPoly P.1) :: P.2.2.2.2.map fun q => toReal (q.toPoly P.1),
       q.totalDegree ≤ P.2.1 := by
     intro q hq
@@ -1296,12 +1360,12 @@ theorem ball_ok (hP : P.Valid) (hη : 0 < η) (hγ : 0 < γ)
       2 ^ (encProblem P).length := fun S hS => (prod_bounds P (hsets S hS)).1
   have hF : ∀ S ∈ sets P.system P.2.1, ∏ i ∈ S, coeffNorm (toReal (P.system.get i)) ≤
       2 ^ (encProblem P).length := fun S hS => (prod_bounds P (hsets S hS)).2.1
-  have hR₀ := R₀_bound hZ (Ry := 2 ^ (Zof P η γ ^ 2)) le_rfl (by positivity)
-    ((two_pow_le hlenP)) ((two_pow_le hlenP)) (by positivity) (η_le_Zof (P := P) (γ := γ))
+  have hR₀ := R₀_bound hZ (Ry := 2 ^ (Zof P η γ L ^ 2)) le_rfl (by positivity)
+    ((two_pow_le hlenP)) ((two_pow_le hlenP)) (by positivity) (η_le_Zof (P := P) (γ := γ) (L := L))
   obtain ⟨zC, hzC, hagree⟩ := exists_lift E' hη0 hE'
-    (fun m hm => moment_bound (γ := γ) hP hη0 E' hE' m hm) hW hF hR₀.1 hR₀.2
+    (fun m hm => moment_bound (γ := γ) hP hbud hη0 E' hE' m hm) hW hF hR₀.1 hR₀.2
   set e := equiv (degsSpec P)
-  set ρ : ℝ := 1 / 2 ^ (32 * Zof P η γ ^ 4)
+  set ρ : ℝ := 1 / 2 ^ (32 * Zof P η γ L ^ 4)
   have hρ0 : 0 ≤ ρ := by positivity
   have hρ1 : ρ ≤ 1 := by
     simp only [ρ]
@@ -1322,33 +1386,35 @@ theorem ball_ok (hP : P.Valid) (hη : 0 < η) (hγ : 0 < γ)
       rw [sq, ← hz]
       exact this
     exact (sq_le_sq₀ (abs_nonneg _) hρ0).1 (by rw [sq_abs]; exact h1.trans hx)
-  have hR1 : (1 : ℝ) ≤ ROf P η γ := by
+  have hR1 : (1 : ℝ) ≤ ROf P η γ L := by
     rw [ROf_cast]; exact one_le_pow₀ (by norm_num)
-  have hin : InSet P.system P.2.1 ((η : ℝ) + γ / 2) ((τOf P η γ : ℝ) / 2) (ROf P η γ) (x ∘ e) := by
+  have hin : InSet P.system P.2.1 ((η : ℝ) + γ / 2) ((τOf P η γ L : ℝ) / 2) (ROf P η γ L)
+      (x ∘ e) := by
     refine mem_of_near hzC hη0 (by positivity) hρ0 hnear ?_ hW ?_ ?_
     · rw [τOf_cast]
-      exact ρ_bound₁ hZ (numVars_pow_le hP)
+      exact ρ_bound₁ hZ (numVars_pow_le hbud)
     · intro S hS
-      exact ρ_bound₂ hZ (numVars_pow_le hP) (two_pow_le hlenP) (by positivity)
+      exact ρ_bound₂ hZ (numVars_pow_le hbud) (two_pow_le hlenP) (by positivity)
         ((one_div_le_one_div_of_le (two_pow_pos' _) (two_pow_le hlenP)).trans
           (prod_bounds P (hsets S hS)).2.2) (γ_ge_Zof hγ)
     · rw [ROf_cast]
-      calc (2 : ℝ) ^ (3 * Zof P η γ ^ 2) + ρ ≤ 2 ^ (3 * Zof P η γ ^ 2) + 2 ^ (3 * Zof P η γ ^ 2) :=
+      calc (2 : ℝ) ^ (3 * Zof P η γ L ^ 2) + ρ
+          ≤ 2 ^ (3 * Zof P η γ L ^ 2) + 2 ^ (3 * Zof P η γ L ^ 2) :=
             add_le_add le_rfl (hρ1.trans (one_le_pow₀ (by norm_num)))
-        _ = 2 ^ (3 * Zof P η γ ^ 2 + 1) := by rw [pow_succ]; ring
+        _ = 2 ^ (3 * Zof P η γ L ^ 2 + 1) := by rw [pow_succ]; ring
   refine ⟨?_, ?_⟩
-  · change InSet P.system P.2.1 ((η + γ / 2 : ℚ) : ℝ) ((τOf P η γ : ℝ) / 2) (ROf P η γ) (x ∘ e)
+  · change InSet P.system P.2.1 ((η + γ / 2 : ℚ) : ℝ) ((τOf P η γ L : ℝ) / 2) (ROf P η γ L) (x ∘ e)
     push_cast
     exact hin
   · -- The objective barely moves.
-    have hzR : ∀ i, |zC i| ≤ (ROf P η γ : ℝ) := fun i =>
+    have hzR : ∀ i, |zC i| ≤ (ROf P η γ L : ℝ) := fun i =>
       (hzC.box i).trans (by rw [ROf_cast]; exact two_pow_le (by omega))
-    have hobj := abs_obj_sub_le (y := ys (x ∘ e)) (y' := ys zC) (ρ := ρ) (B := ROf P η γ) hq
+    have hobj := abs_obj_sub_le (y := ys (x ∘ e)) (y' := ys zC) (ρ := ρ) (B := ROf P η γ L) hq
       fun m _ => ⟨abs_ys_sub_le hρ0 hnear m, abs_ys_le hR1 hin.box m, abs_ys_le hR1 hzR m⟩
     have heq : obj (toReal (P.2.2.2.1.toPoly P.1)) (P.2.2.2.2.map fun q => toReal (q.toPoly P.1))
         (ys zC) = P.objective E' := by
       rw [obj_eq_of_agree E' hagree hq, objective_eq]
-    have hbound : ρ * (coeffNorm1 (toReal (P.2.2.2.1.toPoly P.1)) + 2 * (ROf P η γ : ℝ) *
+    have hbound : ρ * (coeffNorm1 (toReal (P.2.2.2.1.toPoly P.1)) + 2 * (ROf P η γ L : ℝ) *
         ((P.2.2.2.2.map fun q => toReal (q.toPoly P.1)).map fun q => coeffNorm1 q ^ 2).sum) ≤
         γ / 2 := by
       rw [ROf_cast]
@@ -1362,24 +1428,26 @@ theorem ball_ok (hP : P.Valid) (hη : 0 < η) (hγ : 0 < γ)
 
 /-- **The ellipsoid method finds a good center**: for every competitor, some center within `K`
 steps is declared feasible, with objective at most the competitor's plus `γ / 2`. -/
-theorem exists_good (hP : P.Valid) (hη : 0 < η) (hγ : 0 < γ) (hN : 0 < Nof P)
-    (E' : PseudoExpectation (Fin P.1) P.2.1) (hE' : E'.ApproxSatisfies P.system (η : ℝ) 0) :
-    ∃ k < Kof P η γ, (orcOf P η γ (stOf P η γ k).1).1 = true ∧
-      (objOf P (stOf P η γ k).1 : ℝ) ≤ P.objective E' + γ / 2 := by
+theorem exists_good (hP : P.Valid) (hbud : BudgetOK P L) (hη : 0 < η) (hγ : 0 < γ)
+    (hN : 0 < Nof P) (E' : PseudoExpectation (Fin P.1) P.2.1)
+    (hE' : E'.ApproxSatisfies P.system (η : ℝ) 0) :
+    ∃ k < Kof P η γ L, (orcOf P η γ L (stOf P η γ L k).1).1 = true ∧
+      (objOf P (stOf P η γ L k).1 : ℝ) ≤ P.objective E' + γ / 2 := by
   classical
   have : Nonempty (Fin (Nof P)) := ⟨⟨0, hN⟩⟩
-  have hZ : 4 ≤ Zof P η γ := four_le_Zof
+  have hZ : 4 ≤ Zof P η γ L := four_le_Zof
   have hN1 : 1 ≤ Nof P := hN
-  set s : ℝ := 2 ^ (8 * Zof P η γ ^ 2) with hs
-  set δ : ℝ := 2 / 2 ^ expP (Zof P η γ) (Nof P) with hδ
+  set s : ℝ := 2 ^ (8 * Zof P η γ L ^ 2) with hs
+  set δ : ℝ := 2 / 2 ^ expP (Zof P η γ L) (Nof P) with hδ
   have hs1 : (1 : ℝ) ≤ s := one_le_pow₀ (by norm_num)
   have hs0 : (0 : ℝ) < s := by positivity
-  have hP0 : matL (Nof P) (stOf P η γ 0).2.1 = s • (1 : Matrix (Fin (Nof P)) (Fin (Nof P)) ℝ) := by
-    change matL (Nof P) (shape₀ (Nof P) (2 ^ (8 * Zof P η γ ^ 2))) = _
+  have hP0 : matL (Nof P) (stOf P η γ L 0).2.1 =
+      s • (1 : Matrix (Fin (Nof P)) (Fin (Nof P)) ℝ) := by
+    change matL (Nof P) (shape₀ (Nof P) (2 ^ (8 * Zof P η γ L ^ 2))) = _
     rw [matL_shape₀]
     push_cast
     rfl
-  have hc0 : vecL (Nof P) (stOf P η γ 0).1 = 0 := vecL_replicate (Nof P)
+  have hc0 : vecL (Nof P) (stOf P η γ L 0).1 = 0 := vecL_replicate (Nof P)
   have hδ0 : 0 ≤ δ := by positivity
   have hδ1 : δ ≤ 1 := by
     rw [hδ, div_le_one (by positivity)]
@@ -1389,78 +1457,81 @@ theorem exists_good (hP : P.Valid) (hη : 0 < η) (hγ : 0 < γ) (hN : 0 < Nof P
     simp [Ellipsoid.stepSize]
   have hσ1 : Ellipsoid.stepSize (Fin (Nof P)) ≤ 1 :=
     Ellipsoid.stepSize_le.trans (by norm_num)
-  have hB : ((2 ^ expB (Zof P η γ) (Nof P) : ℚ) : ℝ) = 2 ^ (2 * Kof P η γ + 1) * s := by
+  have hB : ((2 ^ expB (Zof P η γ L) (Nof P) : ℚ) : ℝ) = 2 ^ (2 * Kof P η γ L + 1) * s := by
     rw [hs, ← pow_add]
     push_cast
     rfl
   -- The steps.
-  have hstep : ∀ k < Kof P η γ,
-      (matL (Nof P) (stOf P η γ k).2.1)ᵀ = matL (Nof P) (stOf P η γ k).2.1 →
-      (∀ u, s / 4 ^ k * (u ⬝ᵥ u) ≤ u ⬝ᵥ matL (Nof P) (stOf P η γ k).2.1 *ᵥ u) →
-      (∀ u, u ⬝ᵥ matL (Nof P) (stOf P η γ k).2.1 *ᵥ u ≤ 2 ^ k * s * (u ⬝ᵥ u)) →
-      (∀ i, |vecL (Nof P) (stOf P η γ k).1 i - vecL (Nof P) (stOf P η γ 0).1 i| ≤
-        k * (Real.sqrt (2 ^ Kof P η γ * s) + δ)) →
-      vecL (Nof P) (orcOf P η γ (stOf P η γ k).1).2 ≠ 0 ∧
-      (matL (Nof P) (stOf P η γ (k + 1)).2.1)ᵀ = matL (Nof P) (stOf P η γ (k + 1)).2.1 ∧
-      (∀ i, |vecL (Nof P) (stOf P η γ (k + 1)).1 i - Ellipsoid.stepCenter
-        (vecL (Nof P) (stOf P η γ k).1) (vecL (Nof P) (orcOf P η γ (stOf P η γ k).1).2)
-        (matL (Nof P) (stOf P η γ k).2.1) i| ≤ δ) ∧
-      (∀ i j, |matL (Nof P) (stOf P η γ (k + 1)).2.1 i j - Ellipsoid.stepShape
-        (vecL (Nof P) (orcOf P η γ (stOf P η γ k).1).2) (matL (Nof P) (stOf P η γ k).2.1) i j| ≤
-          δ) ∧
-      (¬ (orcOf P η γ (stOf P η γ k).1).1 = true → ∀ x ∈ CSet P η γ,
-        vecL (Nof P) (orcOf P η γ (stOf P η γ k).1).2 ⬝ᵥ (x - vecL (Nof P) (stOf P η γ k).1) ≤ 0) ∧
-      ((orcOf P η γ (stOf P η γ k).1).1 = true → ∀ x ∈ CSet P η γ,
-        fObj P x < fObj P (vecL (Nof P) (stOf P η γ k).1) →
-        vecL (Nof P) (orcOf P η γ (stOf P η γ k).1).2 ⬝ᵥ (x - vecL (Nof P) (stOf P η γ k).1) ≤
-          0) := by
+  have hstep : ∀ k < Kof P η γ L,
+      (matL (Nof P) (stOf P η γ L k).2.1)ᵀ = matL (Nof P) (stOf P η γ L k).2.1 →
+      (∀ u, s / 4 ^ k * (u ⬝ᵥ u) ≤ u ⬝ᵥ matL (Nof P) (stOf P η γ L k).2.1 *ᵥ u) →
+      (∀ u, u ⬝ᵥ matL (Nof P) (stOf P η γ L k).2.1 *ᵥ u ≤ 2 ^ k * s * (u ⬝ᵥ u)) →
+      (∀ i, |vecL (Nof P) (stOf P η γ L k).1 i - vecL (Nof P) (stOf P η γ L 0).1 i| ≤
+        k * (Real.sqrt (2 ^ Kof P η γ L * s) + δ)) →
+      vecL (Nof P) (orcOf P η γ L (stOf P η γ L k).1).2 ≠ 0 ∧
+      (matL (Nof P) (stOf P η γ L (k + 1)).2.1)ᵀ = matL (Nof P) (stOf P η γ L (k + 1)).2.1 ∧
+      (∀ i, |vecL (Nof P) (stOf P η γ L (k + 1)).1 i - Ellipsoid.stepCenter
+        (vecL (Nof P) (stOf P η γ L k).1) (vecL (Nof P) (orcOf P η γ L (stOf P η γ L k).1).2)
+        (matL (Nof P) (stOf P η γ L k).2.1) i| ≤ δ) ∧
+      (∀ i j, |matL (Nof P) (stOf P η γ L (k + 1)).2.1 i j - Ellipsoid.stepShape
+        (vecL (Nof P) (orcOf P η γ L (stOf P η γ L k).1).2) (matL (Nof P) (stOf P η γ L k).2.1)
+          i j| ≤ δ) ∧
+      (¬ (orcOf P η γ L (stOf P η γ L k).1).1 = true → ∀ x ∈ CSet P η γ L,
+        vecL (Nof P) (orcOf P η γ L (stOf P η γ L k).1).2 ⬝ᵥ
+          (x - vecL (Nof P) (stOf P η γ L k).1) ≤ 0) ∧
+      ((orcOf P η γ L (stOf P η γ L k).1).1 = true → ∀ x ∈ CSet P η γ L,
+        fObj P x < fObj P (vecL (Nof P) (stOf P η γ L k).1) →
+        vecL (Nof P) (orcOf P η γ L (stOf P η γ L k).1).2 ⬝ᵥ
+          (x - vecL (Nof P) (stOf P η γ L k).1) ≤ 0) := by
     intro k hk hsym hlo hhi hcen
-    obtain ⟨hl1, hl2, hl3, -⟩ := lengths_stOf η γ k (P := P)
-    have hla := length_orcOf (P := P) (η := η) (γ := γ) hl1
-    obtain ⟨ha0, hcut, hobj⟩ := orc_spec (η := η) (γ := γ) hP hN k
-    have hnext := stOf_succ η γ k (P := P)
-    have hpsd : ∀ u, 0 ≤ u ⬝ᵥ matL (Nof P) (stOf P η γ k).2.1 *ᵥ u := fun u =>
+    obtain ⟨hl1, hl2, hl3, -⟩ := lengths_stOf η γ k (P := P) (L := L)
+    have hla := length_orcOf (P := P) (η := η) (γ := γ) (L := L) hl1
+    obtain ⟨ha0, hcut, hobj⟩ := orc_spec (η := η) (γ := γ) hP hbud hN k
+    have hnext := stOf_succ η γ k (P := P) (L := L)
+    have hpsd : ∀ u, 0 ≤ u ⬝ᵥ matL (Nof P) (stOf P η γ L k).2.1 *ᵥ u := fun u =>
       le_trans (mul_nonneg (by positivity) (Ellipsoid.dotProduct_self_nonneg' u)) (hlo u)
-    have hq : 0 < vecL (Nof P) (orcOf P η γ (stOf P η γ k).1).2 ⬝ᵥ
-        matL (Nof P) (stOf P η γ k).2.1 *ᵥ vecL (Nof P) (orcOf P η γ (stOf P η γ k).1).2 := by
-      have h1 : 0 < vecL (Nof P) (orcOf P η γ (stOf P η γ k).1).2 ⬝ᵥ
-          vecL (Nof P) (orcOf P η γ (stOf P η γ k).1).2 :=
+    have hq : 0 < vecL (Nof P) (orcOf P η γ L (stOf P η γ L k).1).2 ⬝ᵥ
+        matL (Nof P) (stOf P η γ L k).2.1 *ᵥ vecL (Nof P) (orcOf P η γ L (stOf P η γ L k).1).2 := by
+      have h1 : 0 < vecL (Nof P) (orcOf P η γ L (stOf P η γ L k).1).2 ⬝ᵥ
+          vecL (Nof P) (orcOf P η γ L (stOf P η γ L k).1).2 :=
         lt_of_le_of_ne (Ellipsoid.dotProduct_self_nonneg' _)
           (Ne.symm (mt dotProduct_self_eq_zero.1 ha0))
       exact lt_of_lt_of_le (mul_pos (by positivity) h1) (hlo _)
-    have hhi' : ∀ u, u ⬝ᵥ matL (Nof P) (stOf P η γ k).2.1 *ᵥ u ≤ (2 ^ k * s) * (u ⬝ᵥ u) := hhi
+    have hhi' : ∀ u, u ⬝ᵥ matL (Nof P) (stOf P η γ L k).2.1 *ᵥ u ≤ (2 ^ k * s) * (u ⬝ᵥ u) := hhi
     obtain ⟨hcb, hsb⟩ := clamp_bound hk hs1 hδ0 hδ1 hσ1
-    have hBc : ∀ i, |Ellipsoid.stepCenter (vecL (Nof P) (stOf P η γ k).1)
-        (vecL (Nof P) (orcOf P η γ (stOf P η γ k).1).2) (matL (Nof P) (stOf P η γ k).2.1) i| +
-        2 / 2 ^ expP (Zof P η γ) (Nof P) ≤ ((2 ^ expB (Zof P η γ) (Nof P) : ℚ) : ℝ) := by
+    have hBc : ∀ i, |Ellipsoid.stepCenter (vecL (Nof P) (stOf P η γ L k).1)
+        (vecL (Nof P) (orcOf P η γ L (stOf P η γ L k).1).2) (matL (Nof P) (stOf P η γ L k).2.1) i| +
+        2 / 2 ^ expP (Zof P η γ L) (Nof P) ≤ ((2 ^ expB (Zof P η γ L) (Nof P) : ℚ) : ℝ) := by
       intro i
       have h1 := Ellipsoid.abs_stepCenter_sub_le hsym hpsd hhi' hq i
-        (c := vecL (Nof P) (stOf P η γ k).1)
+        (c := vecL (Nof P) (stOf P η γ L k).1)
       have h2 := hcen i
       rw [hc0, Pi.zero_apply, sub_zero] at h2
       rw [hB]
-      have h3 : |Ellipsoid.stepCenter (vecL (Nof P) (stOf P η γ k).1)
-          (vecL (Nof P) (orcOf P η γ (stOf P η γ k).1).2) (matL (Nof P) (stOf P η γ k).2.1) i| ≤
-          |Ellipsoid.stepCenter (vecL (Nof P) (stOf P η γ k).1)
-            (vecL (Nof P) (orcOf P η γ (stOf P η γ k).1).2) (matL (Nof P) (stOf P η γ k).2.1) i -
-              vecL (Nof P) (stOf P η γ k).1 i| + |vecL (Nof P) (stOf P η γ k).1 i| := by
-        have := abs_sub_abs_le_abs_sub (Ellipsoid.stepCenter (vecL (Nof P) (stOf P η γ k).1)
-          (vecL (Nof P) (orcOf P η γ (stOf P η γ k).1).2) (matL (Nof P) (stOf P η γ k).2.1) i)
-          (vecL (Nof P) (stOf P η γ k).1 i)
+      have h3 : |Ellipsoid.stepCenter (vecL (Nof P) (stOf P η γ L k).1)
+          (vecL (Nof P) (orcOf P η γ L (stOf P η γ L k).1).2)
+            (matL (Nof P) (stOf P η γ L k).2.1) i| ≤
+          |Ellipsoid.stepCenter (vecL (Nof P) (stOf P η γ L k).1)
+            (vecL (Nof P) (orcOf P η γ L (stOf P η γ L k).1).2)
+              (matL (Nof P) (stOf P η γ L k).2.1) i -
+              vecL (Nof P) (stOf P η γ L k).1 i| + |vecL (Nof P) (stOf P η γ L k).1 i| := by
+        have := abs_sub_abs_le_abs_sub (Ellipsoid.stepCenter (vecL (Nof P) (stOf P η γ L k).1)
+          (vecL (Nof P) (orcOf P η γ L (stOf P η γ L k).1).2) (matL (Nof P) (stOf P η γ L k).2.1) i)
+          (vecL (Nof P) (stOf P η γ L k).1 i)
         linarith
-      have h4 : 2 / 2 ^ expP (Zof P η γ) (Nof P) = δ := rfl
+      have h4 : 2 / 2 ^ expP (Zof P η γ L) (Nof P) = δ := rfl
       rw [h4]
       linarith
-    have hBP : ∀ i j, |Ellipsoid.stepShape (vecL (Nof P) (orcOf P η γ (stOf P η γ k).1).2)
-        (matL (Nof P) (stOf P η γ k).2.1) i j| + 2 / 2 ^ expP (Zof P η γ) (Nof P) ≤
-        ((2 ^ expB (Zof P η γ) (Nof P) : ℚ) : ℝ) := by
+    have hBP : ∀ i j, |Ellipsoid.stepShape (vecL (Nof P) (orcOf P η γ L (stOf P η γ L k).1).2)
+        (matL (Nof P) (stOf P η γ L k).2.1) i j| + 2 / 2 ^ expP (Zof P η γ L) (Nof P) ≤
+        ((2 ^ expB (Zof P η γ L) (Nof P) : ℚ) : ℝ) := by
       intro i j
       rw [hB]
       exact (add_le_add (Ellipsoid.abs_stepShape_le hsym hpsd hhi' hq i j) le_rfl).trans hsb
     obtain ⟨hcl, hsh⟩ := stepL_spec hl1 hla hl2 hl3 hq hBc hBP
     refine ⟨ha0, ?_, ?_, ?_, ?_, ?_⟩
     · rw [hnext]
-      exact stepL_symm (c := (stOf P η γ k).1) hl2 hl3 hsym
+      exact stepL_symm (c := (stOf P η γ L k).1) hl2 hl3 hsym
     · intro i
       rw [hnext]
       exact hcl i
@@ -1472,17 +1543,17 @@ theorem exists_good (hP : P.Valid) (hη : 0 < η) (hγ : 0 < γ) (hN : 0 < Nof P
     · intro ht x _ hlt
       exact (hobj ht).2 x (Set.mem_univ _) hlt
   -- The starting ellipsoid contains the set.
-  have h0s : (matL (Nof P) (stOf P η γ 0).2.1)ᵀ = matL (Nof P) (stOf P η γ 0).2.1 := by
+  have h0s : (matL (Nof P) (stOf P η γ L 0).2.1)ᵀ = matL (Nof P) (stOf P η γ L 0).2.1 := by
     rw [hP0, Matrix.transpose_smul, Matrix.transpose_one]
-  have hquad0 : ∀ u, u ⬝ᵥ matL (Nof P) (stOf P η γ 0).2.1 *ᵥ u = s * (u ⬝ᵥ u) := by
+  have hquad0 : ∀ u, u ⬝ᵥ matL (Nof P) (stOf P η γ L 0).2.1 *ᵥ u = s * (u ⬝ᵥ u) := by
     intro u
     rw [hP0, Matrix.smul_mulVec, Matrix.one_mulVec, dotProduct_smul, smul_eq_mul]
-  have h0C : ∀ x ∈ CSet P η γ, Ellipsoid.Mem (vecL (Nof P) (stOf P η γ 0).1)
-      (matL (Nof P) (stOf P η γ 0).2.1) x := by
+  have h0C : ∀ x ∈ CSet P η γ L, Ellipsoid.Mem (vecL (Nof P) (stOf P η γ L 0).1)
+      (matL (Nof P) (stOf P η γ L 0).2.1) x := by
     intro x hx
     rw [hc0, hP0]
     apply Ellipsoid.mem_zero_smul_one
-    have hbox : ∀ j, |x j| ≤ 2 ^ (3 * Zof P η γ ^ 2 + 1) := by
+    have hbox : ∀ j, |x j| ≤ 2 ^ (3 * Zof P η γ L ^ 2 + 1) := by
       intro j
       have := hx.box ((equiv (degsSpec P)).symm j)
       rw [ROf_cast] at this
@@ -1491,18 +1562,18 @@ theorem exists_good (hP : P.Valid) (hη : 0 < η) (hγ : 0 < γ) (hN : 0 < Nof P
       rw [hj] at this
       exact this
     calc x ⬝ᵥ x = ∑ j, x j * x j := rfl
-      _ ≤ ∑ _j : Fin (Nof P), (2 : ℝ) ^ (3 * Zof P η γ ^ 2 + 1) * 2 ^ (3 * Zof P η γ ^ 2 + 1) :=
+      _ ≤ ∑ _j : Fin (Nof P), (2 : ℝ) ^ (3 * Zof P η γ L ^ 2 + 1) * 2 ^ (3 * Zof P η γ L ^ 2 + 1) :=
           Finset.sum_le_sum fun j _ => by
             rw [← abs_mul_abs_self]
             exact mul_le_mul (hbox j) (hbox j) (abs_nonneg _) (by positivity)
-      _ = (Nof P : ℝ) * (2 ^ (3 * Zof P η γ ^ 2 + 1)) ^ 2 := by simp [sq]
-      _ ≤ s := ball_bound hZ (Nof_le hP)
+      _ = (Nof P : ℝ) * (2 ^ (3 * Zof P η γ L ^ 2 + 1)) ^ 2 := by simp [sq]
+      _ ≤ s := ball_bound hZ (Nof_le hbud)
   -- The determinant drops below the volume of the ball.
-  have hK : (1 - 3 * Ellipsoid.stepSize (Fin (Nof P)) / 4) ^ Kof P η γ *
-      (matL (Nof P) (stOf P η γ 0).2.1).det <
-      ((1 / 2 ^ (32 * Zof P η γ ^ 4)) ^ 2) ^ Fintype.card (Fin (Nof P)) := by
-    have hKeq : Kof P η γ = 6 * Fintype.card (Fin (Nof P)) *
-        (Nof P * (64 * Zof P η γ ^ 4 + 8 * Zof P η γ ^ 2 + 1)) := by
+  have hK : (1 - 3 * Ellipsoid.stepSize (Fin (Nof P)) / 4) ^ Kof P η γ L *
+      (matL (Nof P) (stOf P η γ L 0).2.1).det <
+      ((1 / 2 ^ (32 * Zof P η γ L ^ 4)) ^ 2) ^ Fintype.card (Fin (Nof P)) := by
+    have hKeq : Kof P η γ L = 6 * Fintype.card (Fin (Nof P)) *
+        (Nof P * (64 * Zof P η γ L ^ 4 + 8 * Zof P η γ L ^ 2 + 1)) := by
       simp only [Kof, expK, Fintype.card_fin]
       ring
     have hbase : 0 ≤ 1 - 3 * Ellipsoid.stepSize (Fin (Nof P)) / 4 := by
@@ -1510,8 +1581,9 @@ theorem exists_good (hP : P.Valid) (hη : 0 < η) (hγ : 0 < γ) (hN : 0 < Nof P
       linarith
     rw [hP0, Matrix.det_smul, Matrix.det_one, mul_one, hKeq, pow_mul]
     calc ((1 - 3 * Ellipsoid.stepSize (Fin (Nof P)) / 4) ^ (6 * Fintype.card (Fin (Nof P)))) ^
-          (Nof P * (64 * Zof P η γ ^ 4 + 8 * Zof P η γ ^ 2 + 1)) * s ^ Fintype.card (Fin (Nof P))
-        ≤ (1 / 2) ^ (Nof P * (64 * Zof P η γ ^ 4 + 8 * Zof P η γ ^ 2 + 1)) *
+          (Nof P * (64 * Zof P η γ L ^ 4 + 8 * Zof P η γ L ^ 2 + 1)) *
+            s ^ Fintype.card (Fin (Nof P))
+        ≤ (1 / 2) ^ (Nof P * (64 * Zof P η γ L ^ 4 + 8 * Zof P η γ L ^ 2 + 1)) *
             s ^ Fintype.card (Fin (Nof P)) := by
           gcongr
           exact Ellipsoid.pow_six_mul_card_le
@@ -1519,36 +1591,36 @@ theorem exists_good (hP : P.Valid) (hη : 0 < η) (hγ : 0 < γ) (hN : 0 < Nof P
           rw [Fintype.card_fin]
           exact det_bound hN1
   have hδ₁ : (Fintype.card (Fin (Nof P)) : ℝ) * δ ≤
-      Ellipsoid.stepSize (Fin (Nof P)) ^ 2 * (s / 4 ^ Kof P η γ) / 8 := by
+      Ellipsoid.stepSize (Fin (Nof P)) ^ 2 * (s / 4 ^ Kof P η γ L) / 8 := by
     rw [Fintype.card_fin, hσ]
     exact (δ_bounds hN1 hs1).1
   have hδ₂ : (Fintype.card (Fin (Nof P)) : ℝ) * δ ^ 2 ≤
-      Ellipsoid.stepSize (Fin (Nof P)) ^ 4 * (s / 4 ^ Kof P η γ) / 128 := by
+      Ellipsoid.stepSize (Fin (Nof P)) ^ 4 * (s / 4 ^ Kof P η γ L) / 128 := by
     rw [Fintype.card_fin, hσ]
     exact (δ_bounds hN1 hs1).2
-  obtain ⟨z, hball⟩ := ball_ok hP hη hγ E' hE'
-  obtain ⟨k, hk, hfeas, hle⟩ := Ellipsoid.exists_feasible_le (Kof P η γ)
-    (fun k => vecL (Nof P) (stOf P η γ k).1)
-    (fun k => vecL (Nof P) (orcOf P η γ (stOf P η γ k).1).2)
-    (fun k => matL (Nof P) (stOf P η γ k).2.1) (CSet P η γ)
-    (fun k => (orcOf P η γ (stOf P η γ k).1).1 = true) (fObj P) (lam := s) (Λ := s) (δ := δ)
-    (r := 1 / 2 ^ (32 * Zof P η γ ^ 4)) (v := P.objective E' + γ / 2) (z := z)
+  obtain ⟨z, hball⟩ := ball_ok hP hbud hη hγ E' hE'
+  obtain ⟨k, hk, hfeas, hle⟩ := Ellipsoid.exists_feasible_le (Kof P η γ L)
+    (fun k => vecL (Nof P) (stOf P η γ L k).1)
+    (fun k => vecL (Nof P) (orcOf P η γ L (stOf P η γ L k).1).2)
+    (fun k => matL (Nof P) (stOf P η γ L k).2.1) (CSet P η γ L)
+    (fun k => (orcOf P η γ L (stOf P η γ L k).1).1 = true) (fObj P) (lam := s) (Λ := s) (δ := δ)
+    (r := 1 / 2 ^ (32 * Zof P η γ L ^ 4)) (v := P.objective E' + γ / 2) (z := z)
     hs0 h0s (fun u => (hquad0 u).ge) (fun u => (hquad0 u).le) h0C hstep hδ₁ hδ₂ (by positivity)
     hball hK
   exact ⟨k, hk, hfeas, by rw [← fObj_vecL]; exact hle⟩
 
 /-- **A competitor's lift is in the relaxed set**, with the competitor's objective. -/
-theorem lift_ok (hP : P.Valid) (hη : 0 < η) (hγ : 0 < γ)
+theorem lift_ok (hP : P.Valid) (hbud : BudgetOK P L) (hη : 0 < η) (hγ : 0 < γ)
     (E' : PseudoExpectation (Fin P.1) P.2.1) (hE' : E'.ApproxSatisfies P.system (η : ℝ) 0) :
     ∃ zC : Coord P.system P.2.1 → ℝ,
-      InSet P.system P.2.1 ((η + γ / 2 : ℚ) : ℝ) (τOf P η γ) (ROf P η γ) zC ∧
+      InSet P.system P.2.1 ((η + γ / 2 : ℚ) : ℝ) (τOf P η γ L) (ROf P η γ L) zC ∧
       obj (toReal (P.2.2.2.1.toPoly P.1)) (P.2.2.2.2.map fun q => toReal (q.toPoly P.1)) (ys zC) =
         P.objective E' := by
   classical
-  have hZ : 4 ≤ Zof P η γ := four_le_Zof
+  have hZ : 4 ≤ Zof P η γ L := four_le_Zof
   have hη0 : (0 : ℝ) ≤ η := by exact_mod_cast hη.le
   have hγ0 : (0 : ℝ) < γ := by exact_mod_cast hγ
-  have hlenP := lenP_le_Zof (P := P) (η := η) (γ := γ)
+  have hlenP := lenP_le_Zof (P := P) (η := η) (γ := γ) (L := L)
   have hq : ∀ q ∈ toReal (P.2.2.2.1.toPoly P.1) :: P.2.2.2.2.map fun q => toReal (q.toPoly P.1),
       q.totalDegree ≤ P.2.1 := by
     intro q hq
@@ -1562,12 +1634,12 @@ theorem lift_ok (hP : P.Valid) (hη : 0 < η) (hγ : 0 < γ)
       2 ^ (encProblem P).length := fun S hS => (prod_bounds P (hsets S hS)).1
   have hF : ∀ S ∈ sets P.system P.2.1, ∏ i ∈ S, coeffNorm (toReal (P.system.get i)) ≤
       2 ^ (encProblem P).length := fun S hS => (prod_bounds P (hsets S hS)).2.1
-  have hR₀ := R₀_bound hZ (Ry := 2 ^ (Zof P η γ ^ 2)) le_rfl (by positivity)
-    ((two_pow_le hlenP)) ((two_pow_le hlenP)) (by positivity) (η_le_Zof (P := P) (γ := γ))
+  have hR₀ := R₀_bound hZ (Ry := 2 ^ (Zof P η γ L ^ 2)) le_rfl (by positivity)
+    ((two_pow_le hlenP)) ((two_pow_le hlenP)) (by positivity) (η_le_Zof (P := P) (γ := γ) (L := L))
   obtain ⟨zC, hzC, hagree⟩ := exists_lift E' hη0 hE'
-    (fun m hm => moment_bound (γ := γ) hP hη0 E' hE' m hm) hW hF hR₀.1 hR₀.2
+    (fun m hm => moment_bound (γ := γ) hP hbud hη0 E' hE' m hm) hW hF hR₀.1 hR₀.2
   refine ⟨zC, ?_, by rw [obj_eq_of_agree E' hagree hq, objective_eq]⟩
-  have hin : InSet P.system P.2.1 ((η : ℝ) + γ / 2) (τOf P η γ) (ROf P η γ) zC := by
+  have hin : InSet P.system P.2.1 ((η : ℝ) + γ / 2) (τOf P η γ L) (ROf P η γ L) zC := by
     refine mem_of_near hzC hη0 (by positivity) le_rfl (fun i => by simp) ?_ hW ?_ ?_
     · rw [zero_mul, τOf_cast]
       positivity
@@ -1587,14 +1659,14 @@ theorem isEmpty_coord (hN : Nof P = 0) : IsEmpty (Coord P.system P.2.1) :=
 
 /-- **The best center**: in the relaxed set, with objective at most every competitor's plus
 `γ / 2`. -/
-theorem best_good (hP : P.Valid) (hη : 0 < η) (hγ : 0 < γ) :
-    InSet P.system P.2.1 ((η + γ / 2 : ℚ) : ℝ) (τOf P η γ) (ROf P η γ)
-        (pt (degsSpec P) (if (stOf P η γ (Kof P η γ)).2.2.1 then (stOf P η γ (Kof P η γ)).2.2.2
-          else List.replicate (Nof P) 0)) ∧
+theorem best_good (hP : P.Valid) (hbud : BudgetOK P L) (hη : 0 < η) (hγ : 0 < γ) :
+    InSet P.system P.2.1 ((η + γ / 2 : ℚ) : ℝ) (τOf P η γ L) (ROf P η γ L)
+        (pt (degsSpec P) (if (stOf P η γ L (Kof P η γ L)).2.2.1 then
+          (stOf P η γ L (Kof P η γ L)).2.2.2 else List.replicate (Nof P) 0)) ∧
       ∀ E' : PseudoExpectation (Fin P.1) P.2.1, E'.ApproxSatisfies P.system (η : ℝ) 0 →
         obj (toReal (P.2.2.2.1.toPoly P.1)) (P.2.2.2.2.map fun q => toReal (q.toPoly P.1))
-          (ys (pt (degsSpec P) (if (stOf P η γ (Kof P η γ)).2.2.1 then
-            (stOf P η γ (Kof P η γ)).2.2.2 else List.replicate (Nof P) 0))) ≤
+          (ys (pt (degsSpec P) (if (stOf P η γ L (Kof P η γ L)).2.2.1 then
+            (stOf P η γ L (Kof P η γ L)).2.2.2 else List.replicate (Nof P) 0))) ≤
           P.objective E' + γ / 2 := by
   classical
   have hη0 : (0 : ℝ) ≤ η := by exact_mod_cast hη.le
@@ -1606,32 +1678,32 @@ theorem best_good (hP : P.Valid) (hη : 0 < η) (hγ : 0 < γ) :
     have := isEmpty_coord hN
     have hall : ∀ x x' : Coord P.system P.2.1 → ℝ, x = x' := fun x x' =>
       funext fun k => isEmptyElim k
-    generalize pt (degsSpec P) (if (stOf P η γ (Kof P η γ)).2.2.1 then
-      (stOf P η γ (Kof P η γ)).2.2.2 else List.replicate (Nof P) 0) = X
-    obtain ⟨zC, hzC, -⟩ := lift_ok hP hη hγ _ hE₀
+    generalize pt (degsSpec P) (if (stOf P η γ L (Kof P η γ L)).2.2.1 then
+      (stOf P η γ L (Kof P η γ L)).2.2.2 else List.replicate (Nof P) 0) = X
+    obtain ⟨zC, hzC, -⟩ := lift_ok hP hbud hη hγ _ hE₀
     refine ⟨by rw [hall X zC]; exact hzC, fun E' hE' => ?_⟩
-    obtain ⟨zC', -, hobj⟩ := lift_ok hP hη hγ E' hE'
+    obtain ⟨zC', -, hobj⟩ := lift_ok hP hbud hη hγ E' hE'
     rw [hall X zC', hobj]
     linarith
-  · have hbs : ((stOf P η γ (Kof P η γ)).2.2.1 = true ↔
-          ∃ k < Kof P η γ, (orcOf P η γ (stOf P η γ k).1).1 = true) ∧
-        ((stOf P η γ (Kof P η γ)).2.2.1 = true → ∃ j < Kof P η γ,
-          (orcOf P η γ (stOf P η γ j).1).1 = true ∧
-          (stOf P η γ (Kof P η γ)).2.2.2 = (stOf P η γ j).1 ∧
-          ∀ k < Kof P η γ, (orcOf P η γ (stOf P η γ k).1).1 = true →
-            objOf P (stOf P η γ j).1 ≤ objOf P (stOf P η γ k).1) :=
+  · have hbs : ((stOf P η γ L (Kof P η γ L)).2.2.1 = true ↔
+          ∃ k < Kof P η γ L, (orcOf P η γ L (stOf P η γ L k).1).1 = true) ∧
+        ((stOf P η γ L (Kof P η γ L)).2.2.1 = true → ∃ j < Kof P η γ L,
+          (orcOf P η γ L (stOf P η γ L j).1).1 = true ∧
+          (stOf P η γ L (Kof P η γ L)).2.2.2 = (stOf P η γ L j).1 ∧
+          ∀ k < Kof P η γ L, (orcOf P η γ L (stOf P η γ L k).1).1 = true →
+            objOf P (stOf P η γ L j).1 ≤ objOf P (stOf P η γ L k).1) :=
       best_spec _ _ _ _ _ _ _ _
-    obtain ⟨k₀, hk₀, hfeas₀, -⟩ := exists_good hP hη hγ hN _ hE₀
-    have hfound : (stOf P η γ (Kof P η γ)).2.2.1 = true := hbs.1.2 ⟨k₀, hk₀, hfeas₀⟩
+    obtain ⟨k₀, hk₀, hfeas₀, -⟩ := exists_good hP hbud hη hγ hN _ hE₀
+    have hfound : (stOf P η γ L (Kof P η γ L)).2.2.1 = true := hbs.1.2 ⟨k₀, hk₀, hfeas₀⟩
     obtain ⟨j, hj, hfeasj, hbest, hmin⟩ := hbs.2 hfound
-    have hbest' : (if (stOf P η γ (Kof P η γ)).2.2.1 then (stOf P η γ (Kof P η γ)).2.2.2
-        else List.replicate (Nof P) 0) = (stOf P η γ j).1 := by
+    have hbest' : (if (stOf P η γ L (Kof P η γ L)).2.2.1 then (stOf P η γ L (Kof P η γ L)).2.2.2
+        else List.replicate (Nof P) 0) = (stOf P η γ L j).1 := by
       rw [ite_eq_left hfound]
       exact hbest
     rw [hbest']
-    refine ⟨((orc_spec (η := η) (γ := γ) hP hN j).2.2 hfeasj).1, fun E' hE' => ?_⟩
-    obtain ⟨k, hk, hfeas, hle⟩ := exists_good hP hη hγ hN E' hE'
-    have h1 : (objOf P (stOf P η γ j).1 : ℝ) ≤ objOf P (stOf P η γ k).1 := by
+    refine ⟨((orc_spec (η := η) (γ := γ) hP hbud hN j).2.2 hfeasj).1, fun E' hE' => ?_⟩
+    obtain ⟨k, hk, hfeas, hle⟩ := exists_good hP hbud hη hγ hN E' hE'
+    have h1 : (objOf P (stOf P η γ L j).1 : ℝ) ≤ objOf P (stOf P η γ L k).1 := by
       exact_mod_cast hmin k hk hfeas
     rw [obj_pt]
     exact h1.trans hle
@@ -1640,29 +1712,29 @@ end Main
 
 /-! ### The output -/
 
-/-- **The algorithm is correct.** -/
-theorem core_correct (P : Problem) (hP : P.Valid) (η γ : ℚ) (hη : 0 < η) (hγ : 0 < γ) :
-    Correct P η γ (core ((P, η, γ), budget (P, η, γ))) := by
+/-- **The algorithm is correct with every budget that suffices.** -/
+theorem core_correct_of_budget (P : Problem) (hP : P.Valid) (η γ : ℚ) (hη : 0 < η) (hγ : 0 < γ)
+    {L : ℕ} (hbud : BudgetOK P L) : Correct P η γ (core ((P, η, γ), L)) := by
   classical
-  obtain ⟨hin, hopt⟩ := best_good hP hη hγ
-  rw [core_eq η γ hP]
-  generalize hb : (if (stOf P η γ (Kof P η γ)).2.2.1 then (stOf P η γ (Kof P η γ)).2.2.2
+  obtain ⟨hin, hopt⟩ := best_good hP hbud hη hγ
+  rw [core_eq η γ hP hbud]
+  generalize hb : (if (stOf P η γ L (Kof P η γ L)).2.2.1 then (stOf P η γ L (Kof P η γ L)).2.2.2
     else List.replicate (Nof P) 0) = best at hin hopt
-  have hZ : 4 ≤ Zof P η γ := four_le_Zof
+  have hZ : 4 ≤ Zof P η γ L := four_le_Zof
   have hη0 : (0 : ℝ) ≤ η := by exact_mod_cast hη.le
   have hγ0 : (0 : ℝ) < γ := by exact_mod_cast hγ
-  have hlenP := lenP_le_Zof (P := P) (η := η) (γ := γ)
+  have hlenP := lenP_le_Zof (P := P) (η := η) (γ := γ) (L := L)
   have hev : Even P.2.1 := hP.1
-  have he := enough hP (η, γ)
-  have he' : Enough (budget (P, η, γ)) P.1 0 P.2.1 :=
+  have he := hbud.enough
+  have he' : Enough L P.1 0 P.2.1 :=
     ⟨he.deg, he.vars, by simpa using (Nat.one_le_pow _ _ (Nat.succ_pos _)).trans he.vars⟩
-  have hL := budget_le_Zof (P := P) (η := η) (γ := γ)
+  have hL := budget_le_Zof (P := P) (η := η) (γ := γ) (L := L)
   set X := pt (degsSpec P) best
-  set t : ℚ := 1 / 2 ^ (8 * Zof P η γ ^ 2)
+  set t : ℚ := 1 / 2 ^ (8 * Zof P η γ L ^ 2)
   set μ : (Fin P.1 →₀ ℕ) → ℝ := fun m => (gridMoment (P.2.1 / 2) m : ℝ)
-  set D : ℝ := 2 ^ (Zof P η γ ^ 2)
+  set D : ℝ := 2 ^ (Zof P η γ L ^ 2)
   have ht : (0 : ℝ) < t := by simp only [t]; positivity
-  have hR1 : (1 : ℝ) ≤ ROf P η γ := by rw [ROf_cast]; exact one_le_pow₀ (by norm_num)
+  have hR1 : (1 : ℝ) ≤ ROf P η γ L := by rw [ROf_cast]; exact one_le_pow₀ (by norm_num)
   have hq : ∀ q ∈ toReal (P.2.2.2.1.toPoly P.1) :: P.2.2.2.2.map fun q => toReal (q.toPoly P.1),
       q.totalDegree ≤ P.2.1 := by
     intro q hq
@@ -1681,15 +1753,15 @@ theorem core_correct (P : Problem) (hP : P.Valid) (η γ : ℚ) (hη : 0 < η) (
   have hμb : ∀ m : Fin P.1 →₀ ℕ, m.degree ≤ P.2.1 → |μ m| ≤ D := by
     intro m hm
     refine (abs_gridMoment_le _ m).trans ?_
-    have hd : ((P.2.1 / 2 : ℕ) : ℝ) ≤ 2 ^ Zof P η γ := by
+    have hd : ((P.2.1 / 2 : ℕ) : ℝ) ≤ 2 ^ Zof P η γ L := by
       exact_mod_cast (Nat.div_le_self _ _).trans (he.deg.trans (by omega) |>.trans
         (Nat.lt_two_pow_self).le)
-    calc ((P.2.1 / 2 : ℕ) : ℝ) ^ m.degree ≤ (2 ^ Zof P η γ) ^ m.degree :=
+    calc ((P.2.1 / 2 : ℕ) : ℝ) ^ m.degree ≤ (2 ^ Zof P η γ L) ^ m.degree :=
           pow_le_pow_left₀ (Nat.cast_nonneg _) hd _
-      _ ≤ (2 ^ Zof P η γ) ^ Zof P η γ :=
+      _ ≤ (2 ^ Zof P η γ L) ^ Zof P η γ L :=
           pow_le_pow_right₀ (one_le_pow₀ (by norm_num)) (hm.trans (he.deg.trans (by omega)))
-      _ = D := by rw [← pow_mul]; change _ = (2 : ℝ) ^ (Zof P η γ ^ 2); rw [sq]
-  have hτ : (τOf P η γ : ℝ) ≤ t * gridEig P.1 (P.2.1 / 2) := by
+      _ = D := by rw [← pow_mul]; change _ = (2 : ℝ) ^ (Zof P η γ L ^ 2); rw [sq]
+  have hτ : (τOf P η γ L : ℝ) ≤ t * gridEig P.1 (P.2.1 / 2) := by
     rw [τOf_cast]
     simp only [t]
     push_cast
@@ -1701,7 +1773,7 @@ theorem core_correct (P : Problem) (hP : P.Valid) (η γ : ℚ) (hη : 0 < η) (
       ((t : ℝ) * ((2 ^ (encProblem P).length + 1) * D)) ^ 2 ≤
       ((γ - γ / 2) * ∏ i ∈ S, coeffNorm (toReal (P.system.get i))) ^ 2 := by
     intro S hS
-    have := t_bound₁ hZ (numVars_pow_le hP) (two_pow_le hlenP) (by positivity) le_rfl
+    have := t_bound₁ hZ (numVars_pow_le hbud) (two_pow_le hlenP) (by positivity) le_rfl
       (by positivity) ((one_div_le_one_div_of_le (two_pow_pos' _) (two_pow_le hlenP)).trans
         (prod_bounds P (hsets S hS)).2.2) (γ_ge_Zof hγ)
     simpa [t] using this
@@ -1712,7 +1784,7 @@ theorem core_correct (P : Problem) (hP : P.Valid) (η γ : ℚ) (hη : 0 < η) (
     have h1 := hy _ (List.get_mem P.system i)
     rw [totalDegree_eq_zero_iff_eq_C.1 hi, toReal, map_C, eval_C] at h1
     exact h1
-  have hin' : InSet P.system P.2.1 ((η : ℝ) + γ / 2) (τOf P η γ) (ROf P η γ) X := by
+  have hin' : InSet P.system P.2.1 ((η : ℝ) + γ / 2) (τOf P η γ L) (ROf P η γ L) X := by
     have := hin
     push_cast at this
     exact this
@@ -1733,8 +1805,8 @@ theorem core_correct (P : Problem) (hP : P.Valid) (η γ : ℚ) (hη : 0 < η) (
       rw [objective_eq, obj, List.map_map, List.map_map]
       rfl
     have hmix := abs_obj_mix_sub_le hR1 hin'.box hμb ht.le hq
-    have hbound : (t : ℝ) * ((ROf P η γ : ℝ) + D) * (coeffNorm1 (toReal (P.2.2.2.1.toPoly P.1)) +
-        2 * ((ROf P η γ : ℝ) + D) *
+    have hbound : (t : ℝ) * ((ROf P η γ L : ℝ) + D) * (coeffNorm1 (toReal (P.2.2.2.1.toPoly P.1)) +
+        2 * ((ROf P η γ L : ℝ) + D) *
           ((P.2.2.2.2.map fun q => toReal (q.toPoly P.1)).map fun q => coeffNorm1 q ^ 2).sum) ≤
         γ / 2 := by
       rw [ROf_cast]
@@ -1746,6 +1818,11 @@ theorem core_correct (P : Problem) (hP : P.Valid) (η γ : ℚ) (hη : 0 < η) (
     rw [hobj]
     have := (abs_le.1 hmix).2
     linarith
+
+/-- **The algorithm is correct**, with the budget `SoS.Solver.budget`. -/
+theorem core_correct (P : Problem) (hP : P.Valid) (η γ : ℚ) (hη : 0 < η) (hγ : 0 < γ) :
+    Correct P η γ (core ((P, η, γ), budget (P, η, γ))) :=
+  core_correct_of_budget P hP η γ hη hγ (budgetOK_budget hP (η, γ))
 
 end SoS.Correct
 
