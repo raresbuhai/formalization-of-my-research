@@ -10,6 +10,7 @@ results stated in `Challenge.lean` and proved in `Solution.lean`:
 | [`BHSV25`](BHSV25) | Buhai, Hua, Steurer, Vári-Kakas. *Finding colorings in one-sided expanders*. [arXiv:2508.02825](https://arxiv.org/abs/2508.02825) |
 | [`BGHKLMM26`](BGHKLMM26) | Buhai, Ghoshal, Huang, Kothari, Lee, Makarychev, Makarychev. *Optimal algorithms and hardness for Max-Cut in bounded degree graphs*. [arXiv:2610.27216](https://arxiv.org/abs/2610.27216) |
 | [`BCFGJPSSV26`](BCFGJPSSV26) | Buhai, Cohen-Addad, Fleischmann, Gupta, Jubés Monforte, Pittu, Stouras, Svensson, Vogl. *A better-than-2 approximation for k-median*, Part I: *The power of general bids* and Part II: *Stable instances*. [arXiv:2610.18144](https://arxiv.org/abs/2610.18144), [arXiv:2610.17172](https://arxiv.org/abs/2610.17172) |
+| [`BMW26`](BMW26) | Buhai, Mazzali, Wrzos-Kaminska. *Efficient recovery of latent coordinate structure from sparse observations of the hypercube*. [arXiv:2610.11741](https://arxiv.org/abs/2610.11741) |
 
 All papers live in one Lake package and share one version of Mathlib. Algorithms and their running
 times are formalized on top of
@@ -24,7 +25,8 @@ Turing machines. CSLib and Mathlib come with it, at the versions it pins.
 Background/                 shared material used by more than one paper
   SumOfSquares/             the sum-of-squares method (see its README.md)
 Imported/                   libraries copied from elsewhere, adapted to our Lean and Mathlib
-  TauCeti/                  from TauCeti: the Gaussian distribution function and Owen's T function
+  TauCeti/                  from TauCeti: the Gaussian distribution function, Owen's T function,
+                            and Bernstein's inequality
   OAI/                      from OpenAI's library: Majority is Stablest
   KMedian195/               from project-k-median: the 1.95 bound on a factor-revealing program
 <Key>/

@@ -1,0 +1,14 @@
+{
+  "challenge_module": "BMW26.Challenge",
+  "solution_module": "BMW26.Solution",
+  "theorem_names": [
+    "BMW26.hypercube_recovery",
+    "BMW26.sos_fkn",
+    "BMW26.spectral_concentration"
+  ],
+  "permitted_axioms": [
+    "propext",
+    "Quot.sound",
+    "Classical.choice"
+  ]
+}
