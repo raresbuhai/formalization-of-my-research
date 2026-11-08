@@ -2,7 +2,7 @@ name = "raresbuhai-papers"
 version = "0.1.0"
 keywords = ["math"]
 license = "Apache-2.0"
-defaultTargets = ["Background", "BKS23", "BBKS24", "BGHKLMM26", "BCFGJPSSV26", "BHSV25", "BMW26", "BS23", "KMedian195"]
+defaultTargets = ["Background", "BKS23", "BBKS24", "BGHKLMM26", "BCFGJPSSV26", "BHSV25", "BMW26", "BS23", "BB20", "KMedian195"]
 
 [leanOptions]
 pp.unicode.fun = true # pretty-prints `fun a ↦ b`
@@ -93,4 +93,10 @@ leanOptions = { weak.linter.style.header = false }
 [[lean_lib]]
 name = "BS23"
 globs = ["BS23.*"]
+leanOptions = { weak.linter.style.header = false }
+
+# arXiv:2006.04166 — Learning restricted Boltzmann machines with sparse latent variables.
+[[lean_lib]]
+name = "BB20"
+globs = ["BB20.*"]
 leanOptions = { weak.linter.style.header = false }

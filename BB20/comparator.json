@@ -1,0 +1,15 @@
+{
+  "challenge_module": "BB20.Challenge",
+  "solution_module": "BB20.Solution",
+  "theorem_names": [
+    "BB20.nu_subset_bound",
+    "BB20.structure_learning",
+    "BB20.structure_learning_strong",
+    "BB20.prediction_error"
+  ],
+  "permitted_axioms": [
+    "propext",
+    "Quot.sound",
+    "Classical.choice"
+  ]
+}

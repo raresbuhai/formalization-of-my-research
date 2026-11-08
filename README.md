@@ -5,6 +5,7 @@ results stated in `Challenge.lean` and proved in `Solution.lean`:
 
 | Folder | Paper |
 | --- | --- |
+| [`BB20`](BB20) | Bresler, Buhai. *Learning restricted Boltzmann machines with sparse latent variables*. NeurIPS 2020. [arXiv:2006.04166](https://arxiv.org/abs/2006.04166) |
 | [`BKS23`](BKS23) | Buhai, Kothari, Steurer. *Algorithms approaching the threshold for semi-random planted clique*. STOC 2023. [arXiv:2212.05619](https://arxiv.org/abs/2212.05619) |
 | [`BS23`](BS23) | Buhai, Steurer. *Beyond parallel pancakes: quasi-polynomial time guarantees for non-spherical Gaussian mixtures*. COLT 2023. [arXiv:2112.05445](https://arxiv.org/abs/2112.05445) |
 | [`BBKS24`](BBKS24) | Błasiok, Buhai, Kothari, Steurer. *Semirandom planted clique and the restricted isometry property*. FOCS 2024. [arXiv:2404.14159](https://arxiv.org/abs/2404.14159) |
