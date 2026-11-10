@@ -1,0 +1,13 @@
+{
+  "challenge_module": "ABBKS26.Challenge",
+  "solution_module": "ABBKS26.Solution",
+  "theorem_names": [
+    "ABBKS26.centered_clustering",
+    "ABBKS26.identical_covariance_clustering"
+  ],
+  "permitted_axioms": [
+    "propext",
+    "Quot.sound",
+    "Classical.choice"
+  ]
+}
