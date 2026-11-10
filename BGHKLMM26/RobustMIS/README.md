@@ -5,6 +5,8 @@
 `ρ ∈ (-1, 0)` there are `C, η₀` such that for every `ξ > 0` there is `τ > 0` with the following
 property. A table `g : {0,1}^R → [0,1]` with all influences at most `τ` that cuts at least
 `arccos ρ / π - η` of the `ρ`-correlated pairs, `0 ≤ η ≤ η₀`, is within `C √η + ξ` of an LTF.
+[Statement.lean](Statement.lean) restates it in the paper's form, as
+`BGHKLMM26.robust_majority_is_stablest` in [../Challenge.lean](../Challenge.lean).
 
 The paper's proof rests on Heilman's robust Borell inequality, a preprint, for its Gaussian lemma
 (Lemma 7.4, with the error `C √Δ`). Here the Gaussian lemma is proved in two steps. Eldan's
@@ -68,7 +70,7 @@ halfspace. Near the halfspace, a local spectral argument gives the error `C √�
 | [SharpFiber.lean](SharpFiber.lean), [SharpHermite.lean](SharpHermite.lean), [SharpLocal.lean](SharpLocal.lean), [Sharp.lean](Sharp.lean) | The Mehler kernel along the normal and the strip bound; the spectral gap of the noise operator (Hermite basis from TauCeti, in [../../Imported/TauCeti](../../Imported/TauCeti)); the local estimate; the Gaussian lemma with the error `C √Δ`. |
 | [Multilinear.lean](Multilinear.lean), [MultilinearGauss.lean](MultilinearGauss.lean), [GaussL2.lean](GaussL2.lean), [Bonami.lean](Bonami.lean) | Multilinear polynomials on the cube and on Gaussian space, `L²` continuity, the Bonami lemma. |
 | [Mollify.lean](Mollify.lean), [Lindeberg.lean](Lindeberg.lean), [Invariance.lean](Invariance.lean) | The invariance principle. |
-| [Truncation.lean](Truncation.lean), [NoiseLTF.lean](NoiseLTF.lean), [BackToCube.lean](BackToCube.lean), [Transfer.lean](Transfer.lean), [Main.lean](Main.lean), [Final.lean](Final.lean) | The truncation, the smoothing removal, the transfer to the cube, and Theorem 7.1. |
+| [Truncation.lean](Truncation.lean), [NoiseLTF.lean](NoiseLTF.lean), [BackToCube.lean](BackToCube.lean), [Transfer.lean](Transfer.lean), [Main.lean](Main.lean), [Final.lean](Final.lean), [Statement.lean](Statement.lean) | The truncation, the smoothing removal, the transfer to the cube, and Theorem 7.1, also in the paper's form. |
 
 Some lemmas are adapted from, or follow, OpenAI's library (`openai/math`, Apache-2.0, commit
 `4eaee87`): Gaussian densities, translation and Stein's identity (`ItoAux.lean`, from

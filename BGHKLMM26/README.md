@@ -21,6 +21,12 @@ of maximum degree `d` has Goemans–Williamson SDP value with triangle inequalit
 `c* - C/d` and Max-Cut value at most `s* + C log d / d`. It is unconditional, proved from
 Theorem 7.1, and checked by `lake comparator` too.
 
+[BGHKLMM26, Theorem 7.1] is `BGHKLMM26.robust_majority_is_stablest`, robust Majority is Stablest:
+for `ρ ∈ (-1, 0)`, a function `f : {0,1}^R → [0,1]` whose influences are at most `τ` and with
+`Cut_ρ(f) ≥ arccos ρ / π - η` is within `L¹` distance `C √η + h(τ)` of a linear threshold
+function, where `h(τ) → 0` as `τ → 0`. It is stated with the definitions of
+[Boolean.lean](Boolean.lean), proved, and checked by `lake comparator` too.
+
 Theorems 1.2 and 1.4 and Corollary 1.3 are stated with `log d / d`, one logarithm better than
 the paper's `log² d / d`. The robust Majority is Stablest theorem behind them (Theorem 7.1) rests
 on the Gaussian lemma with the error `C √Δ` (Lemma 7.4), which the paper takes from Heilman's
@@ -32,7 +38,7 @@ the multiscale union bound of Lemma 6.6 starts at the scale `K log d / d`.
 The formal proof follows the paper's argument in outline, though some of its steps take a
 different route.
 
-Numbers refer to the arXiv version (v2), whose counters are shared within each section.
+Numbers refer to the arXiv version (v2).
 
 ## The statements
 
@@ -56,6 +62,12 @@ Numbers refer to the arXiv version (v2), whose counters are shared within each s
 * **Corollary 1.3** uses the algorithms and the guarantee of Theorem 1.1 (expected value over the
   coins), on Max 2-LIN(2) instances that are unweighted graphs (`BGHKLMM26.IsMaxCutInstance`), so
   it is the converse of Theorem 1.1. The algorithm may depend on `d`.
+* **Functions on the cube** ([Boolean.lean](Boolean.lean)), for Theorem 7.1, as in Sections 4 and
+  7.1 of the paper: the influence `Inf_i(f) = ∑_{S ∋ i} f̂(S)²` for the characters
+  `∏_{i ∈ S} (2xᵢ - 1)` (`BGHKLMM26.cubeInfluence`), `Cut_ρ(f) = E[f(X) + f(Y) - 2 f(X) f(Y)]`
+  over `ρ`-correlated pairs (`BGHKLMM26.cubeCut`), and the LTFs `1(∑ᵢ wᵢ (2xᵢ - 1) + θ ≥ 0)`
+  (`BGHKLMM26.IsCubeLTF`). `dist(f, ℒ_R) ≤ e` is stated as an LTF within `L¹` distance `e`, which
+  is the same since there are finitely many LTFs; `C` and `h` depend only on `ρ`.
 * **The SDP** of Theorem 1.4 (`BGHKLMM26.IsSDPSolution`, `BGHKLMM26.sdpValue`): unit vectors in
   `ℝⁿ` with the triangle inequalities of Section 3, valued by the average of `‖vᵢ - vⱼ‖² / 4` over
   the edges. The theorem exhibits a solution, and also states the integrality gap
@@ -130,5 +142,14 @@ on the sampled edges; some output does both.
 | [IntGap/Tensor.lean](IntGap/Tensor.lean), [IntGap/KS.lean](IntGap/KS.lean), [IntGap/Mix.lean](IntGap/Mix.lean) | The long-code kernel (scales of tensor powers of the tuples) and Khot and Saket's local argument (FOCS 2009) for three points: at each scale, single-linkage clusters at radius `2^{-(i+1)T}` and labels matched through the clusters give correlations with the signed triangle inequalities, within `4/Δ + 2^{-T}` of the kernel. Mixing with the identity, `(1-δ) K + δ I`, makes them exact; vectors from a factorization of the Gram matrix. |
 | [IntGap/Dense.lean](IntGap/Dense.lean) | The kernel on the dense graph of the reduction: at most `ρ (1 - 4zs/2^k)`, so SDP value at least `(1 - ρ)/2` up to `δ` and `4zs/2^k`. |
 | [IntGap/Sample.lean](IntGap/Sample.lean), [IntGap/SoundAt.lean](IntGap/SoundAt.lean) | The completeness of the sparsification for an edge score in `[0, 1]`, applied to the SDP value; the soundness of Theorem 1.2 for a given instance with enough labels and small value. |
+
+### Theorem 7.1
+
+[RobustMIS/Statement.lean](RobustMIS/Statement.lean)
+(`BGHKLMM26.RobustMIS.Statement.robust_majority_is_stablest_cube`): Theorem 7.1 as proved for
+Theorem 1.2 (`BGHKLMM26.RobustMIS.robustMIS`), in the definitions of [Boolean.lean](Boolean.lean).
+They agree with those of the proof: OpenAI's Walsh characters are `(-1)^{|S|} χ_S`, and
+`corrAverage` is the expectation over `ρ`-correlated pairs. The proof gives, for each `ξ > 0`, a
+`τ` below which the error is `C √η + ξ`; `h(τ)` is the least such `ξ`.
 
 *Formalized by [Claude Code](https://claude.com/claude-code).*

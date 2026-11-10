@@ -1,6 +1,7 @@
 module
 
 public import BGHKLMM26.Model
+public import BGHKLMM26.Boolean
 public import BGHKLMM26.GW
 public import BGHKLMM26.Baseline
 public import BGHKLMM26.Energy
@@ -22,6 +23,7 @@ public import BGHKLMM26.RunTime
 public import BGHKLMM26.Stablest
 public import BGHKLMM26.Hardness.Main
 public import BGHKLMM26.RobustMIS.Final
+public import BGHKLMM26.RobustMIS.Statement
 public import BGHKLMM26.Inapprox
 public import BGHKLMM26.IntGap.Main
 
@@ -34,7 +36,7 @@ SODA 2027, [arXiv:2610.27216](https://arxiv.org/abs/2610.27216).
 
 * `BGHKLMM26/Challenge.lean`: the main results, stated without proof. This file and what it
   imports are all a reader needs to check.
-* `BGHKLMM26/Model.lean`: the definitions they are stated in.
+* `BGHKLMM26/Model.lean` and `BGHKLMM26/Boolean.lean`: the definitions they are stated in.
 * `BGHKLMM26/Solution.lean`: the same statements, proved.
 * `BGHKLMM26/comparator.json`: tells `lake comparator` which theorems to compare.
 

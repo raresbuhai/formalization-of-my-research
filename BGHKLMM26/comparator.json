@@ -6,7 +6,8 @@
     "BGHKLMM26.max2lin_approximation",
     "BGHKLMM26.maxCut_hardness",
     "BGHKLMM26.maxCut_inapproximability",
-    "BGHKLMM26.maxCut_integrality_gap"
+    "BGHKLMM26.maxCut_integrality_gap",
+    "BGHKLMM26.robust_majority_is_stablest"
   ],
   "permitted_axioms": [
     "propext",

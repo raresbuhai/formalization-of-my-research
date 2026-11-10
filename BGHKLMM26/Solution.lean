@@ -1,6 +1,7 @@
 module
 
 public import BGHKLMM26.Model
+public import BGHKLMM26.Boolean
 import BGHKLMM26.GW
 import BGHKLMM26.Assembly
 import BGHKLMM26.RunTime
@@ -8,6 +9,7 @@ import BGHKLMM26.Hardness.Main
 import BGHKLMM26.RobustMIS.Final
 import BGHKLMM26.Inapprox
 import BGHKLMM26.IntGap.Main
+import BGHKLMM26.RobustMIS.Statement
 
 /-!
 # Main results: proofs
@@ -26,6 +28,10 @@ the development in this folder. Don't import `Challenge` here: the names would c
   (`BGHKLMM26/Inapprox.lean`) from Theorem 1.2.
 * `BGHKLMM26.maxCut_integrality_gap`: `BGHKLMM26.IntGap.integrality_gap`
   (`BGHKLMM26/IntGap/Main.lean`) from Theorem 7.1.
+* `BGHKLMM26.robust_majority_is_stablest`:
+  `BGHKLMM26.RobustMIS.Statement.robust_majority_is_stablest_cube`
+  (`BGHKLMM26/RobustMIS/Statement.lean`), which restates `BGHKLMM26.RobustMIS.robustMIS` in the
+  definitions of `BGHKLMM26/Boolean.lean`.
 -/
 
 public section
@@ -112,5 +118,19 @@ theorem maxCut_integrality_gap :
         maxCutValue H ≤ Real.arccos ρ / Real.pi + C * Real.log d / d ∧
         maxCutValue H ≤ (alphaGW + C * Real.log d / d) * sdpValue H v :=
   IntGap.integrality_gap RobustMIS.robustMIS
+
+/-- **Theorem 7.1** of [BGHKLMM26], robust Majority is Stablest: for `ρ ∈ (-1, 0)` there are a
+constant `C` and a function `h` with `h(τ) → 0` as `τ ↓ 0` such that every `f : {0,1}^R → [0,1]`
+with influences at most `τ` and `Cut_ρ(f) ≥ arccos ρ / π - η` is within `L¹` distance
+`C √η + h(τ)` of a linear threshold function. -/
+theorem robust_majority_is_stablest :
+    ∀ ρ : ℝ, -1 < ρ → ρ < 0 →
+      ∃ (C : ℝ) (h : ℝ → ℝ), (∀ τ ∈ Set.Ioc (0 : ℝ) 1, 0 ≤ h τ) ∧
+        Filter.Tendsto h (nhdsWithin 0 (Set.Ioi 0)) (nhds 0) ∧
+        ∀ (R : ℕ) (f : (Fin R → Bool) → ℝ), (∀ x, f x ∈ Set.Icc (0 : ℝ) 1) →
+          ∀ τ ∈ Set.Ioc (0 : ℝ) 1, (∀ i, cubeInfluence f i ≤ τ) →
+          ∀ η : ℝ, 0 ≤ η → Real.arccos ρ / Real.pi - η ≤ cubeCut ρ f →
+            ∃ L, IsCubeLTF L ∧ cubeL1 f L ≤ C * Real.sqrt η + h τ :=
+  RobustMIS.Statement.robust_majority_is_stablest_cube
 
 end BGHKLMM26

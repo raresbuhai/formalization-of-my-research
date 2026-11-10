@@ -1,6 +1,7 @@
 module
 
 public import BGHKLMM26.Model
+public import BGHKLMM26.Boolean
 
 /-!
 # Main results: statements
@@ -10,9 +11,10 @@ The main results of [BGHKLMM26], with proofs `sorry`. `lake comparator` checks t
 
 What a reader has to trust is this file and what it imports: the definitions in
 `BGHKLMM26/Model.lean` (Max 2-LIN(2), Max-Cut, its SDP relaxation, randomized algorithms,
-encodings), the encodings in `Background/Encoding.lean`, the Unique Games Conjecture in
-`Background/UniqueGames.lean`, CSLib's multitape Turing machines, complexitylib's classes `NP`,
-`BPP` and `PromiseBPP` and its gap problems, and Mathlib.
+encodings) and in `BGHKLMM26/Boolean.lean` (Fourier coefficients, influences, correlated pairs and
+linear threshold functions on the cube), the encodings in `Background/Encoding.lean`, the Unique
+Games Conjecture in `Background/UniqueGames.lean`, CSLib's multitape Turing machines,
+complexitylib's classes `NP`, `BPP` and `PromiseBPP` and its gap problems, and Mathlib.
 
 ## Theorem 1.1
 
@@ -115,6 +117,34 @@ Formally (`BGHKLMM26.maxCut_integrality_gap`):
   soundness is that of the reduction of Theorem 1.2, applied to the Unique Games integrality gap
   instances of Khot and Vishnoi [KV15] instead of to the instances of the Unique Games
   Conjecture.
+
+## Theorem 7.1
+
+[BGHKLMM26, Theorem 7.1], robust Majority is Stablest: for `ρ ∈ (-1, 0)` there are a constant
+`C_ρ` and a function `h_ρ : (0, 1] → [0, ∞)` with `h_ρ(τ) → 0` as `τ ↓ 0` such that every
+`f : {0,1}^R → [0,1]` with `max_i Inf_i(f) ≤ τ` and `Cut_ρ(f) ≥ s_ρ - η`, where
+`s_ρ = arccos ρ / π` and `η ≥ 0`, satisfies `dist(f, ℒ_R) ≤ C_ρ √η + h_ρ(τ)`. It is the robust
+inverse of Majority is Stablest behind the soundness in Theorems 1.2 and 1.4, with the optimal
+exponent `1/2` of `η` (Mossel and Neeman have an unspecified exponent `c > 0`).
+
+Formally (`BGHKLMM26.robust_majority_is_stablest`):
+
+* **The definitions** are those of [BGHKLMM26, Sections 4 and 7.1], in `BGHKLMM26/Boolean.lean`.
+  Points of `{0,1}^R` are functions `Fin R → Bool`, with `true` for `1`, and expectations are
+  under the uniform measure. The influence is `Inf_i(f) = ∑_{S ∋ i} f̂(S)²` with
+  `f̂(S) = E[f χ_S]` and `χ_S(x) = ∏_{i ∈ S} (2xᵢ - 1)` (`BGHKLMM26.cubeInfluence`); the cut value
+  is `Cut_ρ(f) = E[f(X) + f(Y) - 2 f(X) f(Y)]` for `X` uniform and `Y` a `ρ`-correlated copy, each
+  `Yᵢ = Xᵢ` with probability `(1 + ρ)/2` independently (`BGHKLMM26.cubeCut`); and the LTFs are the
+  functions `1(∑ᵢ wᵢ (2xᵢ - 1) + θ ≥ 0)`, constants included (`BGHKLMM26.IsCubeLTF`).
+* **The distance.** `dist(f, ℒ_R) ≤ e` is stated as the existence of an LTF `L` with
+  `‖f - L‖₁ = E|f - L| ≤ e` (`BGHKLMM26.cubeL1`). There are finitely many LTFs on `{0,1}^R`, so
+  the infimum is attained and the two are the same.
+* **Constants.** `C` and `h` depend only on `ρ`: the same ones serve every `R`, every `f`, every
+  `τ ∈ (0, 1]` and every `η ≥ 0`. `h(τ) → 0` as `τ ↓ 0` is
+  `Filter.Tendsto h (nhdsWithin 0 (Set.Ioi 0)) (nhds 0)`.
+* **The Gaussian input** is the paper's Lemma 7.4, robust Borell with the error `C √Δ`; as for
+  Theorem 1.2, the proof derives it from Eldan's estimate and a local spectral argument at the
+  halfspace, in place of Heilman's theorem.
 -/
 
 public section
@@ -174,6 +204,20 @@ theorem maxCut_integrality_gap :
         (1 - ρ) / 2 - C / d ≤ sdpValue H v ∧
         maxCutValue H ≤ Real.arccos ρ / Real.pi + C * Real.log d / d ∧
         maxCutValue H ≤ (alphaGW + C * Real.log d / d) * sdpValue H v :=
+  sorry
+
+/-- **Theorem 7.1** of [BGHKLMM26], robust Majority is Stablest: for `ρ ∈ (-1, 0)` there are a
+constant `C` and a function `h` with `h(τ) → 0` as `τ ↓ 0` such that every `f : {0,1}^R → [0,1]`
+with influences at most `τ` and `Cut_ρ(f) ≥ arccos ρ / π - η` is within `L¹` distance
+`C √η + h(τ)` of a linear threshold function. -/
+theorem robust_majority_is_stablest :
+    ∀ ρ : ℝ, -1 < ρ → ρ < 0 →
+      ∃ (C : ℝ) (h : ℝ → ℝ), (∀ τ ∈ Set.Ioc (0 : ℝ) 1, 0 ≤ h τ) ∧
+        Filter.Tendsto h (nhdsWithin 0 (Set.Ioi 0)) (nhds 0) ∧
+        ∀ (R : ℕ) (f : (Fin R → Bool) → ℝ), (∀ x, f x ∈ Set.Icc (0 : ℝ) 1) →
+          ∀ τ ∈ Set.Ioc (0 : ℝ) 1, (∀ i, cubeInfluence f i ≤ τ) →
+          ∀ η : ℝ, 0 ≤ η → Real.arccos ρ / Real.pi - η ≤ cubeCut ρ f →
+            ∃ L, IsCubeLTF L ∧ cubeL1 f L ≤ C * Real.sqrt η + h τ :=
   sorry
 
 end BGHKLMM26
