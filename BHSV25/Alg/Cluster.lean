@@ -4,31 +4,22 @@ public import BHSV25.Alg.Rounding
 public import Background.Tuples
 
 /-!
-# The clustering algorithm
+# Clusters, their rounding, and the best coloring
 
-The algorithm of [BHSV25, Theorems 5.1, 7.1 and 7.9] as a function on the input of a graph
-(`BHSV25.Alg.clusterAlg`), given a map `net` from the input to a list of rational vectors (the
-net of an eigenspace of `BHSV25/Net/Spec.lean`), a number `m` of clusters and the color `K ≥ m`
-that marks uncolored vertices:
+The pieces of the clustering algorithm of [BHSV25, Theorems 5.1, 7.1 and 7.9]
+(`BHSV25/Alg/GridCluster.lean`), on the input of a graph:
 
-1. **Candidates.** For every `m`-tuple of vectors `u₀, …, u_{m-1}` of the net and every `m`-tuple
-   of vertices `x₀, …, x_{m-1}`, put each vertex `y` in the cluster `a` of the representative
-   `x_a` nearest to it in the coordinates of the `u_j`: `a` minimizes
-   `∑_j (u_j[y] - u_j[x_a])²` (`BHSV25.Alg.clusters`, the first minimizer).
-2. **Rounding** [BHSV25, Lemma 7.23]: round each cluster to an independent set
-   (`BHSV25.Alg.roundIndep`); a vertex keeps the color of its cluster if it survives, and gets `K`
-   otherwise (`BHSV25.Alg.colorOf`).
-3. **Selection**: output the candidate with the most colored vertices
-   (`BHSV25.Alg.bestColoring`).
+* **the nearest center**: the first minimizer below `m` (`BHSV25.Alg.argminBelow`);
+* **rounding** [BHSV25, Lemma 7.24]: each cluster is rounded to an independent set
+  (`BHSV25.Alg.roundIndep`); a vertex keeps the color of its cluster if it survives, and gets the
+  uncolored mark `K ≥ m` otherwise (`BHSV25.Alg.colorOf`);
+* **selection**: the candidate with the most colored vertices (`BHSV25.Alg.bestColoring`).
 
-The paper's Algorithm 3 guesses the centers of the clusters on a grid of resolution
-`Θ(1/√n)`; guessing a vertex of each cluster as its center (`n^m` guesses) does the same without
-a grid.
-
-The correctness facts here are combinatorial (`BHSV25.Alg.clusterAlg_spec`): the output is a
-partial `K`-coloring, and for every candidate partition `R₀, …, R_{m-1}` and independent sets
-`I₀, …, I_{m-1}`, it colors at least `∑_a (|R_a ∩ I_a| - |R_a \ I_a|)` vertices. Which candidate
-is good is the analysis of `BHSV25/Alg/Partition.lean`.
+The facts are combinatorial: a rounded candidate is a partial `K`-coloring
+(`BHSV25.Alg.isPartialColoring_colorOf`) and, for every partition `R₀, …, R_(m-1)` and independent
+sets `I₀, …, I_(m-1)`, colors at least `∑_a max(0, |R_a ∩ I_a| - |R_a \ I_a|)` vertices
+(`BHSV25.Alg.sum_card_inter_le`); the best candidate colors at least as many vertices as each
+(`BHSV25.Alg.bestColoring_spec`).
 -/
 
 @[expose] public section
@@ -41,25 +32,12 @@ open Finset
 
 /-! ### Clustering -/
 
-/-- The squared distance `∑_j (u_j[y] - u_j[x])²` between the vertices `y` and `x` in the
-coordinates given by the vectors `us`. -/
-def sqDist (us : List (List ℚ)) (y x : ℕ) : ℚ :=
-  (us.map fun u ↦ (u.getD y 0 - u.getD x 0) ^ 2).sum
-
 /-- One step of the search for a minimizer: `a` replaces the current `best` if it is strictly
 better. -/
 def argminStep (f : ℕ → ℚ) (best a : ℕ) : ℕ := if f a < f best then a else best
 
 /-- The first `a < m` minimizing `f` (`0` if `m = 0`). -/
 def argminBelow (f : ℕ → ℚ) (m : ℕ) : ℕ := (List.range m).foldl (argminStep f) 0
-
-/-- The cluster of the vertex `y`: the index of the representative in `xs` nearest to it. -/
-def clusterIdx (us : List (List ℚ)) (xs : List ℕ) (y : ℕ) : ℕ :=
-  argminBelow (fun a ↦ sqDist us y (xs.getD a 0)) xs.length
-
-/-- The clusters of the vertices `0, …, n - 1`. -/
-def clusters (n : ℕ) (us : List (List ℚ)) (xs : List ℕ) : List ℕ :=
-  (List.range n).map (clusterIdx us xs)
 
 /-! ### Rounding the clusters -/
 
@@ -97,22 +75,6 @@ def bestColoring (n K : ℕ) (cs : List (List ℕ)) : List ℕ :=
 
 /-! ### The algorithm -/
 
-/-- The number of tuples to try: `(n + N + 1)^m`, more than `n^m` and `N^m`. -/
-def clusterBudget (n N m : ℕ) : ℕ := (n + N + 1) ^ m
-
-/-- **The candidates**: for every `m`-tuple of vectors of `U` and every `m`-tuple of vertices,
-the rounded clusters. -/
-def candidates (n m K : ℕ) (adj : List Bool) (U : List (List ℚ)) : List (List ℕ) :=
-  (Tuples.tuples (clusterBudget n U.length m) U.length m).flatMap fun is ↦
-    (Tuples.tuples (clusterBudget n U.length m) n m).map fun xs ↦
-      colorOf n m K adj (clusters n (is.map fun i ↦ U.getD i []) xs)
-
-/-- **The clustering algorithm** with `m` clusters, uncolored vertices marked `K`, and the net
-`net`: the best candidate. -/
-def clusterAlg (m K : ℕ) (net : ℕ × List Bool → List (List ℚ)) (x : ℕ × List Bool) :
-    List ℕ :=
-  bestColoring (numV x) K (candidates (numV x) m K x.2 (net x))
-
 /-! ### The search for a minimizer -/
 
 theorem argminBelow_spec (f : ℕ → ℚ) (i : ℕ) :
@@ -149,21 +111,6 @@ theorem argminBelow_eq (f : ℕ → ℚ) {m a : ℕ} (ha : a < m) (h : ∀ b < m
   have h1 := (argminBelow_spec f m).2 a ha
   have h2 := h _ hlt hne
   exact absurd h1 (not_le.2 h2)
-
-theorem clusterIdx_lt (us : List (List ℚ)) {xs : List ℕ} (hxs : 0 < xs.length) (y : ℕ) :
-    clusterIdx us xs y < xs.length :=
-  argminBelow_lt _ hxs
-
-/-- A vertex strictly nearest to the representative `x_a` is put in the cluster `a`. -/
-theorem clusterIdx_eq (us : List (List ℚ)) (xs : List ℕ) (y : ℕ) {a : ℕ} (ha : a < xs.length)
-    (h : ∀ b < xs.length, b ≠ a → sqDist us y (xs.getD a 0) < sqDist us y (xs.getD b 0)) :
-    clusterIdx us xs y = a :=
-  argminBelow_eq _ ha h
-
-theorem getD_clusters {n : ℕ} (us : List (List ℚ)) (xs : List ℕ) {y : ℕ} (hy : y < n) (d : ℕ) :
-    (clusters n us xs).getD y d = clusterIdx us xs y := by
-  rw [List.getD_eq_getElem _ _ (by simp [clusters, hy])]
-  simp [clusters]
 
 /-! ### The rounded coloring -/
 
@@ -304,78 +251,7 @@ theorem bestColoring_spec (n K : ℕ) (cs : List (List ℕ)) :
 
 /-! ### The candidates -/
 
-theorem colorOf_mem_candidates (n m K : ℕ) (adj : List Bool) (U : List (List ℚ))
-    (us : Fin m → List ℚ) (hus : ∀ j, us j ∈ U) (xs : Fin m → Fin n) :
-    colorOf n m K adj (clusters n (List.ofFn us) (List.ofFn fun j ↦ (xs j : ℕ))) ∈
-      candidates n m K adj U := by
-  rw [candidates, List.mem_flatMap]
-  have hU : ∀ j, U.idxOf (us j) < U.length := fun j ↦ List.idxOf_lt_length_of_mem (hus j)
-  have hle1 : U.length ^ m ≤ clusterBudget n U.length m :=
-    Nat.pow_le_pow_left (by omega) m
-  have hle2 : n ^ m ≤ clusterBudget n U.length m := Nat.pow_le_pow_left (by omega) m
-  refine ⟨List.ofFn fun j ↦ ((⟨U.idxOf (us j), hU j⟩ : Fin U.length) : ℕ),
-    Tuples.ofFn_mem_tuples hle1 _, List.mem_map.2 ⟨_, Tuples.ofFn_mem_tuples hle2 xs, ?_⟩⟩
-  congr 3
-  rw [List.map_ofFn]
-  congr 1
-  funext j
-  simp only [Function.comp_apply]
-  rw [List.getD_eq_getElem _ _ (hU j), List.getElem_idxOf]
-
 /-! ### The algorithm on a graph -/
-
-/-- **What the algorithm guarantees**, for `1 ≤ m ≤ K`: a partial `K`-coloring that, for every
-candidate (vectors `us` of the net and representatives `xs`) and all independent sets `I_a`, colors
-at least `∑_a max(0, |R_a ∩ I_a| - |R_a \ I_a|)` vertices, where `R_a` are the clusters. -/
-theorem clusterAlg_spec {m K : ℕ} (hm : 0 < m) (hmK : m ≤ K)
-    (net : ℕ × List Bool → List (List ℚ)) :
-    G.IsPartialColoring K (clusterAlg m K net (G.1, adjTable G)) ∧
-      ∀ (us : Fin m → List ℚ), (∀ j, us j ∈ net (G.1, adjTable G)) →
-      ∀ (xs : Fin m → Fin G.1) (I : ℕ → Finset (Fin G.1)),
-        (∀ a, G.2.IsIndepSet (I a : Set (Fin G.1))) →
-        ∑ a ∈ range m, max 0
-          (((classSet G m (clusters G.1 (List.ofFn us) (List.ofFn fun j ↦ (xs j : ℕ))) a ∩
-            I a).card : ℝ) -
-          (classSet G m (clusters G.1 (List.ofFn us) (List.ofFn fun j ↦ (xs j : ℕ))) a \
-            I a).card) ≤
-          G.numColored K (clusterAlg m K net (G.1, adjTable G)) := by
-  have hp : ∀ (us : List (List ℚ)) (xs : Fin m → Fin G.1) (v : Fin G.1),
-      (clusters G.1 us (List.ofFn fun j ↦ (xs j : ℕ))).getD v m < m := by
-    intro us xs v
-    rw [getD_clusters _ _ v.2]
-    have := clusterIdx_lt us (xs := List.ofFn fun j ↦ (xs j : ℕ)) (by simpa using hm) v
-    simpa using this
-  have hrun : clusterAlg m K net (G.1, adjTable G) =
-      bestColoring G.1 K (candidates G.1 m K (adjTable G) (net (G.1, adjTable G))) := by
-    rw [clusterAlg, numV_graph]
-  obtain ⟨hmem, hbest⟩ :=
-    bestColoring_spec G.1 K (candidates G.1 m K (adjTable G) (net (G.1, adjTable G)))
-  rw [hrun]
-  refine ⟨?_, fun us hus xs I hI ↦ ?_⟩
-  · rcases hmem with h | h
-    · generalize bestColoring G.1 K (candidates G.1 m K (adjTable G) (net (G.1, adjTable G))) = b
-        at h ⊢
-      rw [candidates, List.mem_flatMap] at h
-      obtain ⟨is, -, h⟩ := h
-      obtain ⟨xs', hxs', hc⟩ := List.mem_map.1 h
-      obtain ⟨hlen, -⟩ := Tuples.mem_tuples_le hxs'
-      rw [← hc]
-      refine isPartialColoring_colorOf G hmK _ fun v ↦ ?_
-      rw [getD_clusters _ _ v.2]
-      exact hlen ▸ clusterIdx_lt _ (by omega) v
-    · rw [h]
-      intro u v _ hu
-      simp [Graph.color] at hu
-  · have hc := colorOf_mem_candidates G.1 m K (adjTable G) _ us hus xs
-    have h1 := sum_card_inter_le G hmK _ (hp (List.ofFn us) xs) I hI
-    have h2 := hbest _ hc
-    rw [← numColored_eq_numCol, ← numColored_eq_numCol] at h2
-    have h2' : (G.numColored K (colorOf G.1 m K (adjTable G)
-        (clusters G.1 (List.ofFn us) (List.ofFn fun j ↦ (xs j : ℕ)))) : ℝ) ≤
-        G.numColored K
-          (bestColoring G.1 K (candidates G.1 m K (adjTable G) (net (G.1, adjTable G)))) := by
-      exact_mod_cast h2
-    linarith
 
 end Alg
 

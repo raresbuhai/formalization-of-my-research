@@ -8,26 +8,18 @@ public import Mathlib.Data.Nat.Size
 public import Mathlib.Data.Rat.Cast.Defs
 
 /-!
-# The nets on lists of numbers
+# Integer matrices on lists of numbers
 
-The algorithm behind `BHSV25/Net/Spec.lean`, as a function on lists (`BHSV25.Net.netList`), with
-fixed natural parameters (`BHSV25.Net.Params`). On the input `(n, a)` of a graph with adjacency
-matrix `A` and degree `d` (read off vertex `0`), it
+The list operations under the greedy net (`BHSV25/Net/GSMachine.lean`), on the input `(n, a)` of a
+graph with adjacency matrix `A` and degree `d` (read off vertex `0`):
 
-1. forms the integer matrix `M = d I - A` (for the bottom eigenspace) or `M = A` (for the
-   absolute one), so that `M / D` is `(I - Ã) / 2` with `D = 2 d`, or `Ã` with `D = d`;
-2. computes `Q = M^e` exactly, with `e = c (a + 2 ⌈log₂ (n + 1)⌉)` for the bottom eigenspace and
-   twice that for the absolute one: `Q / D^e` is the filter `P` of `BHSV25/Net/Approx.lean`;
-3. lists, for all `T`-tuples `v` of vertices and `z` of integers in `[0, 2 Z]`, the vector
-   `∑ⱼ (zⱼ - Z) Q e_{vⱼ} / (S D^e)`, with `S = K n` and `Z = Z_c (n + 1)^{Z_e}`, together with the
-   empty list (the zero vector).
-
-The tuples are those of `Background/Tuples.lean`, cut at the budget `(n + 2 Z + 1)^T`, which cuts
-nothing. The number of vertices is capped at the length of the table (`BHSV25.Net.numV`), so that
-every loop is polynomial in the length of the input, also on inputs that are not graphs.
-
-This file also proves that the list operations compute matrix products and powers
-(`BHSV25.Net.toMat_powL`).
+* the number of vertices, capped at the length of the table (`BHSV25.Net.numV`), so that every
+  loop is polynomial in the length of the input, also on inputs that are not graphs; the adjacency
+  bits (`BHSV25.Net.adjB`) and the degree (`BHSV25.Net.deg`);
+* the integer matrix `M = d I - A` (bottom eigenspace) or `M = A` (`BHSV25.Net.baseMat`), with
+  `M / D = (I - Ã) / 2` for `D = 2 d` or `M / D = Ã` for `D = d` (`BHSV25.Net.denBase`);
+* products and powers of square tables (`BHSV25.Net.mulL`, `BHSV25.Net.powL`), which compute
+  matrix products and powers (`BHSV25.Net.toMat_powL`).
 -/
 
 @[expose] public section
@@ -36,18 +28,12 @@ namespace BHSV25
 
 namespace Net
 
-/-- The parameters of the algorithm: the eigenspace (`bottom`), the length `T` of the tuples, the
-exponent `c (a + 2 ⌈log₂ (n + 1)⌉)`, the scale `S = K n` and the range `Z = Z_c (n + 1)^{Z_e}`. -/
+/-- The eigenspace of a filter: the bottom one (`bottom = true`) or that of the eigenvalues large
+in absolute value. -/
 structure Params where
   bottom : Bool
-  T : ℕ
-  c : ℕ
-  a : ℕ
-  K : ℕ
-  Zc : ℕ
-  Ze : ℕ
 
-/-! ### The algorithm -/
+/-! ### The operations -/
 
 /-- The number of vertices, capped at the length of the table. -/
 def numV (x : ℕ × List Bool) : ℕ := min x.2.length x.1
@@ -81,39 +67,8 @@ def idL (N : ℕ) : List (List ℤ) :=
 def powL (N : ℕ) (M : List (List ℤ)) (e : ℕ) : List (List ℤ) :=
   (fun X ↦ mulL N X M)^[e] (idL N)
 
-/-- The exponent `e`. -/
-def expo (p : Params) (N : ℕ) : ℕ := (if p.bottom then 1 else 2) * (p.c * (p.a + 2 * N.size))
-
 /-- The base `D` of the denominator `D^e`. -/
 def denBase (p : Params) (d : ℕ) : ℕ := (if p.bottom then 2 else 1) * d
-
-/-- The range `Z` of the coefficients. -/
-def zMax (p : Params) (N : ℕ) : ℕ := p.Zc * (N + 1) ^ p.Ze
-
-/-- The budget of the tuples. -/
-def budget (p : Params) (N : ℕ) : ℕ := (N + 2 * zMax p N + 1) ^ p.T
-
-/-- The candidate `∑ⱼ (zⱼ - Z) Q e_{vⱼ} / q`, for the rows `vⱼ` of `Q`. -/
-def cand (T N Z : ℕ) (q : ℚ) (Q : List (List ℤ)) (vs zs : List ℕ) : List ℚ :=
-  (List.range N).map fun u ↦
-    ((((List.range T).map fun j ↦
-      ((zs.getD j 0 : ℤ) - Z) * (Q.getD (vs.getD j 0) []).getD u 0).sum : ℤ) : ℚ) / q
-
-/-- What the candidates are made of: `N`, `Z`, `q = S D^e`, `Q = M^e` and the budget. -/
-def ctx (p : Params) (x : ℕ × List Bool) : ℕ × ℕ × ℚ × List (List ℤ) × ℕ :=
-  (numV x, zMax p (numV x),
-    ((p.K * numV x * denBase p (deg (numV x) x.2) ^ expo p (numV x) : ℕ) : ℚ),
-    powL (numV x) (baseMat p.bottom (numV x) (deg (numV x) x.2) x.2) (expo p (numV x)),
-    budget p (numV x))
-
-/-- All candidates. -/
-def body (T : ℕ) (c : ℕ × ℕ × ℚ × List (List ℤ) × ℕ) : List (List ℚ) :=
-  (Tuples.tuples c.2.2.2.2 c.1 T).flatMap fun vs ↦
-    (Tuples.tuples c.2.2.2.2 (2 * c.2.1 + 1) T).map fun zs ↦
-      cand T c.1 c.2.1 c.2.2.1 c.2.2.2.1 vs zs
-
-/-- **The net**: the zero vector and all candidates. -/
-def netList (p : Params) (x : ℕ × List Bool) : List (List ℚ) := [] :: body p.T (ctx p x)
 
 /-! ### Lists of rows as matrices -/
 

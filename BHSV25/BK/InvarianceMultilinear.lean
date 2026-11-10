@@ -27,30 +27,10 @@ open OAI.MaxCutGames.Foundations.Hastad OAI.OptimalMaxCut.Analytic
 variable {R : ℕ}
 
 namespace Multilinear
-/-- `mlEval c ∘ bitVec` as a Walsh expansion. -/
-theorem mlEval_bitVec_eq_sum (c : Cube (Fin R) → ℝ) (x : Cube (Fin R)) :
-    mlEval c (bitVec x) = ∑ s, c s * walsh s x := by
-  rw [mlEval]
-  refine Finset.sum_congr rfl fun s _ ↦ ?_
-  congr 1
-  unfold walsh bitVec
-  refine Finset.prod_congr rfl fun i _ ↦ ?_
-  cases s i <;> simp [bitSign]
-
 
 end Multilinear
 
 open Multilinear
-
-/-- Walsh inversion: `f(x) = ∑_S f̂(S) χ_S(x)`. -/
-theorem mlEval_bitVec (f : Cube (Fin R) → ℝ) (x : Cube (Fin R)) :
-    mlEval (coefficient f) (bitVec x) = f x := by
-  rw [← walsh_inversion f x, mlEval]
-  refine Finset.sum_congr rfl fun s _ ↦ ?_
-  congr 1
-  unfold walsh bitVec
-  refine Finset.prod_congr rfl fun i _ ↦ ?_
-  cases s i <;> simp [bitSign]
 
 /-- The noise operator is `smoothC` on coefficients. -/
 theorem mlEval_smoothC_bitVec (r : ℝ) (f : Cube (Fin R) → ℝ) (x : Cube (Fin R)) :
@@ -62,20 +42,6 @@ theorem mlEval_smoothC_bitVec (r : ℝ) (f : Cube (Fin R) → ℝ) (x : Cube (Fi
   refine Finset.prod_congr rfl fun i _ ↦ ?_
   cases s i <;> simp [bitSign]
 
-/-- The Walsh coefficients of a multilinear polynomial on the cube are its coefficients. -/
-theorem coefficient_mlEval (c : Cube (Fin R) → ℝ) (s : Cube (Fin R)) :
-    coefficient (fun x ↦ mlEval c (bitVec x)) s = c s := by
-  unfold coefficient
-  simp_rw [mlEval_bitVec_eq_sum, Finset.sum_mul]
-  rw [Finset.expect_sum_comm]
-  simp_rw [mul_assoc, ← Finset.mul_expect, walsh_orthogonality]
-  simp
-
-/-- Parseval on the cube. -/
-theorem expect_mlEval_sq (c : Cube (Fin R) → ℝ) :
-    (𝔼 x, mlEval c (bitVec x) ^ 2) = ∑ s, c s ^ 2 := by
-  rw [← walsh_parseval]
-  simp_rw [coefficient_mlEval]
 namespace MultilinearGauss
 
 /-! ### Monomials -/
@@ -85,7 +51,6 @@ noncomputable def mono (s : Cube (Fin R)) (x : Fin R → ℝ) : ℝ := ∏ i, if
 
 theorem mlEval_eq_sum (c : Cube (Fin R) → ℝ) (x : Fin R → ℝ) :
     mlEval c x = ∑ s, c s * mono s x := rfl
-
 
 theorem mono_mul_arg (t : ℝ) (s : Cube (Fin R)) (x : Fin R → ℝ) :
     mono s (fun i ↦ t * x i) = t ^ sdeg s * mono s x := by

@@ -1,38 +1,23 @@
 module
 
 public import BHSV25.Alg.IndepSetSpectral
-public import BHSV25.Alg.IndepSetParams
+public import BHSV25.Spectral.Basic
+public import Mathlib.Analysis.SpecialFunctions.Sqrt
+public import Mathlib.Order.Filter.AtTopBot.Basic
 public import Background.PolyTime.Rat
 
 /-!
-# Theorem 1.1: independent sets in one-sided expanders
+# Rounding a net to an independent set
 
-[BHSV25, Theorem 1.1] in the form of Corollary 7.21 (`BHSV25.Alg.independentSet_approximation`):
-for every `λ ∈ (0, 1)` and every `t`, a polynomial-time algorithm that, on regular graphs with at
-most `t` eigenvalues larger than `λ` and an independent set of `(1/2 - γ) n` vertices,
-`γ ∈ [0, 1/10]`, outputs an independent set of at least `(1/2 - (5 + f λ) γ) n` vertices, where
-`f = BHSV25.Alg.indepLoss` tends to `0` as `λ → 0`.
+The algorithm of [BHSV25, Theorem 7.20] for a given net (`BHSV25.Alg.indepAlg`): each vector `c` of
+the net gives the candidate set `{x : c_x ≥ 0}` (`BHSV25.Alg.thrBits`), rounded to an independent
+set by removing a greedy maximal matching (`BHSV25.Alg.roundIndep`); so does the set of all
+vertices. The algorithm outputs the largest result (`BHSV25.Alg.bestOf`).
 
-## The algorithm (`BHSV25.Alg.indepAlg`)
-
-For rational thresholds `θ₀ < θ' < θ < θ₁` and a precision `κ < θ₁ / 2` (the parameters of
-`BHSV25/Alg/IndepSetParams.lean`), the net of `BHSV25.Net.exists_bottomNet` lists vectors containing
-one within `κ / n` of every vector of norm at most `1` in the span of the eigenvectors with
-eigenvalue at most `-θ`. Each vector `c` gives the candidate set `{x : c_x ≥ 0}`
-(`BHSV25.Alg.thrBits`), rounded to an independent set by removing a greedy maximal matching
-(`BHSV25.Alg.roundIndep`); so does the set of all vertices. The algorithm outputs the largest
-result (`BHSV25.Alg.bestOf`).
-
-## Why it works
-
-By [BHSV25, Corollary 4.2] the graph has few eigenvalues at most `-θ'`, so the net applies. One
-algorithm serves every `γ`: the net's precision `κ / n` is absorbed by the loss whenever
-`|I| < n / 2`, and recovers `I` exactly when `|I| = n / 2`
-(`BHSV25.Alg.card_roundIndep_thrBits_ge`). Graphs without edges (degree `0`) are handled by the
-candidate of all vertices, and the empty graph trivially.
-
-`BHSV25.Alg.exists_indepAlg` states the guarantee of the concrete algorithm, which Corollary 1.2
-also uses (`BHSV25/Alg/VertexCover.lean`).
+The output is an independent set (`BHSV25.Alg.isIndepSet_indepAlg`) at least as large as every
+candidate (`BHSV25.Alg.card_cand_le_indepAlg`), and on graphs without edges it has all vertices
+(`BHSV25.Alg.card_indepAlg_of_degree_zero`). It runs in polynomial time given a polynomial-time net
+(`BHSV25.Alg.indepAlg_polytime`, and `BHSV25.Alg.bestOf'` for the selection).
 -/
 
 @[expose] public section
@@ -177,22 +162,6 @@ theorem bestOf' {n : α → ℕ} {init : α → List Bool} {L : α → List (Lis
   unfold bestStep
   split_ifs <;> omega
 
-/-- **The algorithm runs in polynomial time**, given a polynomial-time net. -/
-theorem indepAlg_polytime {net : ℕ × List Bool → List (List ℚ)}
-    (hnet : ComputableInPolyTime net (encPair encNat encBits) (encList (encList encRat))) :
-    ComputableInPolyTime (indepAlg net) (encPair encNat encBits) encBits := by
-  unfold indepAlg
-  have hn : ComputableInPolyTime numV (encPair encNat encBits) encUnary := numV_polytime
-  have hrep : ComputableInPolyTime (fun x : ℕ × List Bool ↦ List.replicate (numV x) true)
-      (encPair encNat encBits) encBits :=
-    (bits_encList_polyTime encBool).2.comp (replicate hn (const true))
-  have hL : ComputableInPolyTime
-      (fun x : ℕ × List Bool ↦ (net x).map fun c ↦ roundIndep (numV x) x.2 (thrBits (numV x) c))
-      (encPair encNat encBits) (encList encBits) :=
-    mapWithInput hnet (roundIndep' (hn.comp (fst _ _)) ((snd _ _).comp (fst _ _))
-      (thrBits' (hn.comp (fst _ _)) (snd _ _)))
-  exact bestOf' hn (roundIndep' hn (snd _ _) hrep) hL
-
 /-! ### The size of the output -/
 
 theorem vertexSet_replicate (G : Graph) : G.vertexSet (List.replicate G.1 true) = Finset.univ := by
@@ -216,95 +185,5 @@ theorem card_indepAlg_of_degree_zero (net : ℕ × List Bool → List (List ℚ)
   exact h.trans (card_init_le_indepAlg net G)
 
 /-! ### Theorem 1.1 -/
-
-/-- **The guarantee of the algorithm** [BHSV25, Corollary 7.21]: for `λ ∈ (0, 1)` and `t`, a
-polynomial-time net for which the algorithm, on regular graphs with at most `t` eigenvalues larger
-than `λ` and an independent set of `(1/2 - γ) n` vertices, `γ ≥ 0`, outputs at least
-`(1/2 - (5 + f λ) γ) n` vertices. (It always outputs an independent set,
-`BHSV25.Alg.isIndepSet_indepAlg`, and all vertices on graphs without edges,
-`BHSV25.Alg.card_indepAlg_of_degree_zero`.) -/
-theorem exists_indepAlg {lam : ℝ} (h0 : 0 < lam) (h1 : lam < 1) (t : ℕ) :
-    ∃ net : ℕ × List Bool → List (List ℚ),
-      ComputableInPolyTime net (encPair encNat encBits) (encList (encList encRat)) ∧
-      ∀ G : Graph, G.IsRegular → G.numEigGT lam ≤ t →
-        ∀ γ : ℝ, 0 ≤ γ → G.HasIndepSet ((1 / 2 - γ) * G.1) →
-          (1 / 2 - (5 + indepLoss lam) * γ) * G.1 ≤
-            (G.vertexSet (indepAlg net (G.1, adjTable G))).card := by
-  classical
-  -- the rational parameters
-  obtain ⟨θ', hθ'1, hθ'2⟩ := exists_rat_btwn (thetaLow_lt_thetaUp h0 h1)
-  obtain ⟨θ, hθ1, hθ2⟩ := exists_rat_btwn hθ'2
-  obtain ⟨κ, hκ1, hκ2⟩ := exists_rat_btwn (half_pos (thetaUp_pos h0 h1))
-  have hθ'pos : (0 : ℚ) < θ' := by exact_mod_cast (thetaLow_pos h0 h1).trans hθ'1
-  have hθθ' : θ' < θ := by exact_mod_cast hθ1
-  have hθlt : (θ : ℝ) < 1 := hθ2.trans (thetaUp_lt_one h0 h1)
-  have hθlt1 : θ < 1 := by exact_mod_cast hθlt
-  have hκpos : (0 : ℚ) < κ := by exact_mod_cast hκ1
-  obtain ⟨net, hnet, hcorr⟩ :=
-    Net.exists_bottomNet θ' θ κ hθ'pos hθθ' hθlt1 hκpos ⌊(t : ℝ) / tauOf lam ^ 2⌋₊
-  have hK := const_le_indepLoss h0 h1 hθ2 hκ1 hκ2
-  have hf0 := indepLoss_nonneg h0 h1
-  refine ⟨net, hnet, fun G hreg ht ↦ ?_⟩
-  rintro γ hγ0 ⟨I, hI, hIcard⟩
-  set f := indepLoss lam with hf
-  set out := (G.vertexSet (indepAlg net (G.1, adjTable G))).card with hout
-  have h5f : 0 ≤ (5 + f) * γ := mul_nonneg (by linarith only [hf0]) hγ0
-  have hhalf : (1 / 2 - (5 + f) * γ) * G.1 ≤ G.1 / 2 := by
-    have := mul_nonneg h5f (Nat.cast_nonneg G.1 : (0 : ℝ) ≤ G.1)
-    linarith only [this]
-  obtain ⟨d, hd⟩ := hreg
-  rcases Nat.eq_zero_or_pos G.1 with hn0 | hn
-  · -- no vertices
-    have : (G.1 : ℝ) = 0 := by exact_mod_cast hn0
-    rw [this, mul_zero]
-    exact Nat.cast_nonneg _
-  by_cases hd0 : d = 0
-  · -- no edges
-    subst hd0
-    have h := card_indepAlg_of_degree_zero net G hd
-    have h' : (G.1 : ℝ) ≤ out := by exact_mod_cast h
-    have hn' : (0 : ℝ) ≤ G.1 := Nat.cast_nonneg _
-    linarith only [hhalf, h', hn']
-  -- the net applies
-  have hT : (Finset.univ.filter fun i ↦ G.eig i ≤ -((θ' : ℚ) : ℝ)).card ≤
-      ⌊(t : ℝ) / tauOf lam ^ 2⌋₊ := by
-    refine (Finset.card_le_card fun i hi ↦ ?_).trans (card_eig_le_neg_thetaLow_le G h0 h1 ht)
-    rw [Finset.mem_filter] at hi ⊢
-    exact ⟨hi.1, hi.2.trans (neg_le_neg hθ'1.le)⟩
-  set w := Spectral.proj G.normAdj_isHermitian (· ≤ -(θ : ℝ)) (signVec I) with hw
-  have hw1 : w ⬝ᵥ w ≤ 1 :=
-    (proj_dot_self_le _ _ _).trans (signVec_dot_self hn I).le
-  have hw2 : G.InEigSpan (· ≤ -(θ : ℝ)) w := Spectral.inEigSpan_proj _ _ _
-  obtain ⟨c, hc, hcw⟩ := hcorr G ⟨d, hd⟩ hT w hw1 hw2
-  have hcand := card_roundIndep_thrBits_ge G hd hd0 hn hI hθlt (thetaUp_pos h0 h1) hK.2 c hcw
-  have hle : ((G.vertexSet (roundIndep G.1 (adjTable G) (thrBits G.1 c))).card : ℝ) ≤ out := by
-    exact_mod_cast card_cand_le_indepAlg net G hc
-  -- the arithmetic
-  set g : ℝ := G.1 / 2 - I.card with hg
-  have hg0 : 0 ≤ g := by
-    have : (2 * I.card : ℝ) ≤ G.1 := by exact_mod_cast two_mul_card_le G hd hd0 hI
-    linarith only [this, hg]
-  have hgγ : g ≤ γ * G.1 := by linarith only [hIcard, hg]
-  have hA1 := mul_le_mul_of_nonneg_right hK.1 hg0
-  have hA2 := mul_le_mul_of_nonneg_left hgγ (by linarith only [hf0] : (0 : ℝ) ≤ 5 + f)
-  linarith only [hcand, hle, hA1, hA2, hg]
-
-/-- **Theorem 1.1** of [BHSV25] (Corollary 7.21): for every `λ ∈ (0, 1)` and every `t`, a
-polynomial-time algorithm that, on regular graphs with at most `t` eigenvalues larger than `λ`
-(`λ`-one-sided expanders for `t = 1`) and an independent set of `(1/2 - γ) n` vertices for some
-`γ ∈ [0, 1/10]`, outputs an independent set of at least `(1/2 - (5 + f λ) γ) n` vertices, where
-`f λ → 0` as `λ → 0`. -/
-theorem independentSet_approximation :
-    ∃ f : ℝ → ℝ, Tendsto f (𝓝[>] 0) (𝓝 0) ∧
-      ∀ lam : ℝ, 0 < lam → lam < 1 → ∀ t : ℕ,
-        ∃ A : Graph → List Bool, ComputableInPolyTime A encGraph Encoding.encBits ∧
-          ∀ G : Graph, G.IsRegular → G.numEigGT lam ≤ t →
-            G.2.IsIndepSet (G.vertexSet (A G) : Set (Fin G.1)) ∧
-            ∀ γ : ℝ, 0 ≤ γ → γ ≤ 1 / 10 → G.HasIndepSet ((1 / 2 - γ) * G.1) →
-              (1 / 2 - (5 + f lam) * γ) * G.1 ≤ (G.vertexSet (A G)).card := by
-  refine ⟨indepLoss, tendsto_indepLoss, fun lam h0 h1 t ↦ ?_⟩
-  obtain ⟨net, hnet, hcorr⟩ := exists_indepAlg h0 h1 t
-  refine ⟨fun G ↦ indepAlg net (G.1, adjTable G), (indepAlg_polytime hnet).comp (of_eq fun _ ↦ rfl),
-    fun G hreg ht ↦ ⟨isIndepSet_indepAlg net G, fun γ hγ0 _ hγ ↦ hcorr G hreg ht γ hγ0 hγ⟩⟩
 
 end BHSV25.Alg

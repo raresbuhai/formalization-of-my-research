@@ -2,6 +2,7 @@
   "challenge_module": "BHSV25.Challenge",
   "solution_module": "BHSV25.Solution",
   "theorem_names": [
+    "BHSV25.independentSet_bottomRank",
     "BHSV25.independentSet_approximation",
     "BHSV25.vertexCover_approximation",
     "BHSV25.threeColoring_balanced",

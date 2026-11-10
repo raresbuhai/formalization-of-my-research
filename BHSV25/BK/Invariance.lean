@@ -69,17 +69,6 @@ lemma sum_sq_truncC_le {r : ℝ} (hr0 : 0 ≤ r) (hr1 : r ≤ 1) (d : ℕ) (c : 
       _ = c s ^ 2 := one_mul _
   · simp only [ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true, zero_pow]; positivity
 
-lemma inflC_truncC_le {r : ℝ} (hr0 : 0 ≤ r) (hr1 : r ≤ 1) (d : ℕ) (c : Cube (Fin R) → ℝ)
-    (i : Fin R) : inflC (truncC d (smoothC r c)) i ≤ inflC c i := by
-  refine Finset.sum_le_sum fun s _ => ?_
-  simp only [truncC, smoothC]
-  split_ifs
-  · rw [mul_pow]
-    calc (r ^ sdeg s) ^ 2 * c s ^ 2 ≤ 1 * c s ^ 2 := by
-          gcongr; exact pow_le_one₀ (pow_nonneg hr0 _) (pow_le_one₀ hr0 hr1)
-      _ = c s ^ 2 := one_mul _
-  · simp only [ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true, zero_pow]; positivity
-
 /-- Smoothing does not increase the low-degree influences. -/
 lemma inflC_truncC_smoothC_le {r : ℝ} (hr0 : 0 ≤ r) (hr1 : r ≤ 1) (d : ℕ)
     (c : Cube (Fin R) → ℝ) (i : Fin R) :

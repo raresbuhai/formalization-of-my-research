@@ -43,9 +43,11 @@ say.
   between its parts, and an **`(M, δ)`-coloring** (`BHSV25.Graph.IsMColoring`, [BHSV25,
   Definition 3.5]) is a partition whose model is `δ`-close to `M` entrywise and whose
   monochromatic edges are covered by at most `δ n` vertices.
-* **`(M, β)`-expander-coloring** (`BHSV25.SolvesExpanderColoring`, [BHSV25, Section 1]): for every
-  `ε > 0` there is `δ > 0` such that on regular `δ`-one-sided expanders with an `(M, δ)`-coloring,
-  the algorithm outputs a `(k, β + ε)`-coloring.
+* **Partitions proper up to `δ n` vertices** (`BHSV25.Graph.IsAlmostProper`): the edges inside
+  the parts are covered by at most `δ n` vertices, as in [BHSV25, Theorem 7.9].
+* **Running times** (`BHSV25.RunsInTime A encIn encOut K C`): a deterministic multitape Turing
+  machine computes `A` in at most `⌈K (m + 1)^C⌉` steps on inputs whose encoding has length `m`,
+  in polynomially bounded space (CSLib's `Turing.MultiTapeTM.ComputableInTimeAndSpaceOfLength`).
 * **Hardness** is conditional on the Unique Games Conjecture (`UniqueGames.UGC`, in
   `Background/UniqueGames.lean`, which asks for NP-hardness of Unique Games under deterministic
   polynomial-time reductions from every problem in `NP`). The conclusions are
@@ -193,6 +195,11 @@ def IsMColoring {k : ℕ} (M : Matrix (Fin k) (Fin k) ℝ) (δ : ℝ) (χ : Fin 
 def MColorable {k : ℕ} (M : Matrix (Fin k) (Fin k) ℝ) (δ : ℝ) : Prop :=
   ∃ χ : Fin G.1 → Fin k, G.IsMColoring M δ χ
 
+/-- `χ` is **proper up to `δ n` vertices**: the edges inside its parts are covered by at most
+`δ n` vertices [BHSV25, Theorem 7.9]. -/
+def IsAlmostProper {k : ℕ} (χ : Fin G.1 → Fin k) (δ : ℝ) : Prop :=
+  ∃ S : Finset (Fin G.1), (S.card : ℝ) ≤ δ * G.1 ∧ ∀ u v, G.2.Adj u v → χ u = χ v → u ∈ S ∨ v ∈ S
+
 end Graph
 
 /-- A **model** [BHSV25, Sections 1 and 3]: a `k × k` matrix with nonnegative entries, rows summing
@@ -220,14 +227,18 @@ exactly when `M` has no repeated rows. -/
 noncomputable def alpha {k : ℕ} (M : Matrix (Fin k) (Fin k) ℝ) (π : Fin k → ℝ) : ℝ :=
   ∑ a, min (π a) (∑ b ∈ Finset.univ.filter (fun b ↦ b ≠ a ∧ M b = M a), π b)
 
-/-- `A` **solves `(M, β)`-expander-coloring** [BHSV25, Section 1]: for every `ε > 0` there is
-`δ > 0` such that, on every regular `δ`-one-sided expander that has an `(M, δ)`-coloring, `A`
-outputs a `(k, β + ε)`-coloring: `k` independent sets covering all but a `β + ε` fraction of the
-vertices. `M`-expander-coloring is the case `β = 0`. One algorithm serves every `ε`. -/
-def SolvesExpanderColoring {k : ℕ} (M : Matrix (Fin k) (Fin k) ℝ) (β : ℝ)
-    (A : Graph → List ℕ) : Prop :=
-  ∀ ε : ℝ, 0 < ε → ∃ δ : ℝ, 0 < δ ∧ ∀ G : Graph, G.IsRegular → G.IsOneSidedExpander δ →
-    G.MColorable M δ → G.IsColoring k (β + ε) (A G)
+/-! ### Running times -/
+
+/-- `A` **runs in time `K · m^C`**: some deterministic multitape Turing machine with a binary
+alphabet and finitely many states computes `A`, relative to the encodings `encIn` and `encOut`, in
+at most `⌈K (m + 1)^C⌉` steps on every input whose encoding has length `m`, using a polynomially
+bounded number of work-tape cells. A running time `n^{O(1)} · g(p)` for parameters `p` is: there is
+`C` such that for all values of `p` some algorithm runs in time `g(p) · m^C`. -/
+def RunsInTime {α β : Type*} (A : α → β) (encIn : α ↪ List Bool) (encOut : β ↪ List Bool)
+    (K : ℝ) (C : ℕ) : Prop :=
+  ∃ s : ℕ → ℕ, Cslib.PolynomiallyBounded s ∧
+    Turing.MultiTapeTM.ComputableInTimeAndSpaceOfLength A encIn encOut
+      (fun m ↦ ⌈K * ((m : ℝ) + 1) ^ C⌉₊) s
 
 /-! ### Hardness -/
 

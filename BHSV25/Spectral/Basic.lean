@@ -16,8 +16,7 @@ Facts about symmetric real matrices through an orthonormal basis of eigenvectors
 * **Counting eigenvalues** by subspaces, in the direction of the Courant–Fischer theorem: if the
   only vector of the span of the eigenvectors with eigenvalues in `S` that is orthogonal to `r`
   given vectors is `0`, at most `r` eigenvalues lie in `S`
-  (`BHSV25.Spectral.card_le_of_inEigSpan`). Weyl's inequality follows
-  (`BHSV25.Spectral.card_gt_le_of_quad_le`).
+  (`BHSV25.Spectral.card_le_of_inEigSpan`).
 * **Graphs**: the normalized adjacency matrix has nonnegative entries and eigenvalues in
   `[-1, 1]`; for a `d`-regular graph it is `A / d` and fixes the all-ones vector; a regular graph
   with at most one eigenvalue above `L` has `xᵀ Ã x ≤ (∑ x)² / n + L (‖x‖² - (∑ x)² / n)`; and
@@ -81,10 +80,6 @@ theorem inEigSpan_proj (hA : A.IsHermitian) (S : ℝ → Prop) (x : ι → ℝ) 
     InEigSpan hA S (proj hA S x) :=
   Impl.inEigSpan_proj hA S x
 
-theorem proj_eq_self (hA : A.IsHermitian) {S : ℝ → Prop} {x : ι → ℝ} (h : InEigSpan hA S x) :
-    proj hA S x = x :=
-  Impl.proj_eq_self hA h
-
 open Classical in
 /-- **Courant–Fischer, counting form**: if the only vector in the span of the eigenvectors with
 eigenvalues in `S` that is orthogonal to `w 0, …, w (r - 1)` is `0`, then at most `r` eigenvalues
@@ -94,25 +89,9 @@ theorem card_le_of_inEigSpan (hA : A.IsHermitian) (S : ℝ → Prop) {r : ℕ} (
     (Finset.univ.filter fun i ↦ S (hA.eigenvalues i)).card ≤ r :=
   Impl.card_le_of_inEigSpan hA S w h
 
-theorem quad_ge_of_inEigSpan (hA : A.IsHermitian) {τ : ℝ} {x : ι → ℝ}
-    (h : InEigSpan hA (τ ≤ ·) x) : τ * (x ⬝ᵥ x) ≤ x ⬝ᵥ (A *ᵥ x) :=
-  Impl.quad_ge_of_inEigSpan hA h
-
 theorem quad_gt_of_inEigSpan (hA : A.IsHermitian) {τ : ℝ} {x : ι → ℝ}
     (h : InEigSpan hA (τ < ·) x) (hx : x ≠ 0) : τ * (x ⬝ᵥ x) < x ⬝ᵥ (A *ᵥ x) :=
   Impl.quad_gt_of_inEigSpan hA h hx
-
-theorem quad_le_of_inEigSpan (hA : A.IsHermitian) {τ : ℝ} {x : ι → ℝ}
-    (h : InEigSpan hA (· ≤ τ) x) : x ⬝ᵥ (A *ᵥ x) ≤ τ * (x ⬝ᵥ x) :=
-  Impl.quad_le_of_inEigSpan hA h
-
-/-- **Weyl's inequality**, counting form: if `xᵀ A x ≤ xᵀ B x + ε ‖x‖²` for every `x`, then `A`
-has at most as many eigenvalues above `τ + ε` as `B` has above `τ`. -/
-theorem card_gt_le_of_quad_le (hA : A.IsHermitian) (hB : B.IsHermitian) {ε : ℝ}
-    (h : ∀ x, x ⬝ᵥ (A *ᵥ x) ≤ x ⬝ᵥ (B *ᵥ x) + ε * (x ⬝ᵥ x)) (τ : ℝ) :
-    (Finset.univ.filter fun i ↦ τ + ε < hA.eigenvalues i).card ≤
-      (Finset.univ.filter fun i ↦ τ < hB.eigenvalues i).card :=
-  Impl.card_gt_le_of_quad_le hA hB h τ
 
 end Spectral
 

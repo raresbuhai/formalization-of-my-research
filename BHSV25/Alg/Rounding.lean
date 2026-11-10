@@ -26,8 +26,7 @@ past `n` are ignored). The output is the membership bits of the result, `n` of t
 * `BHSV25.Alg.isIndepSet_roundIndep`: the result is independent in `G`.
 * `BHSV25.Alg.vertexSet_roundIndep_subset`: it is contained in the input set.
 * `BHSV25.Alg.card_inter_le_card_roundIndep`: for every independent set `I` of `G`,
-  `|S ∩ I| ≤ |result| + |S \ I|` (and `BHSV25.Alg.card_le_card_roundIndep_of_subset`, the paper's
-  form, for `I ⊆ S`).
+  `|S ∩ I| ≤ |result| + |S \ I|`.
 * `BHSV25.Alg.roundIndep_polytime` and `BHSV25.Alg.roundIndep'` (for `fun_prop`): polynomial time,
   with `n` in unary (`BHSV25.Alg.numV` computes it from the input of a graph).
 -/
@@ -61,9 +60,6 @@ def removeMatching (n : ℕ) (a : List Bool) (s : List ℕ) : List ℕ :=
 a greedy maximal matching inside it, as membership bits. -/
 def roundIndep (n : ℕ) (a b : List Bool) : List Bool :=
   listToBits n (removeMatching n a (bitsToList n b))
-
-theorem length_roundIndep (n : ℕ) (a b : List Bool) : (roundIndep n a b).length = n :=
-  length_listToBits _ _
 
 /-! ### The greedy matching on lists -/
 
@@ -246,14 +242,6 @@ theorem card_inter_le_card_roundIndep (G : Graph) (b : List Bool) {I : Finset (F
   change _ ≤ ((R.toFinset.filter (· ∈ J)).card : ℤ) - (R.toFinset.filter fun w ↦ ¬w ∈ J).card
     at hpot
   omega
-
-/-- **[BHSV25, Lemma 7.24]**, in the paper's form: for an independent set `I` contained in the
-input set `S`, the result has at least `|I| - |S \ I|` vertices. -/
-theorem card_le_card_roundIndep_of_subset (G : Graph) (b : List Bool) {I : Finset (Fin G.1)}
-    (hI : G.2.IsIndepSet (I : Set (Fin G.1))) (hIS : I ⊆ G.vertexSet b) :
-    I.card ≤ (G.vertexSet (roundIndep G.1 (adjTable G) b)).card + (G.vertexSet b \ I).card := by
-  have h := card_inter_le_card_roundIndep G b hI
-  rwa [Finset.inter_eq_right.2 hIS] at h
 
 /-! ### Polynomial time -/
 

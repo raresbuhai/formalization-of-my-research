@@ -19,12 +19,9 @@ The analysis of [BHSV25, Theorem 7.20], for one candidate vector.
 * **Rounding** [BHSV25, Lemma 7.23]. Thresholding a vector `w` at `0` misclassifies at most
   `n ‖w - u‖²` vertices (`BHSV25.Alg.card_misclassified_le`), and the rounding of
   `BHSV25.Alg.roundIndep` loses at most one vertex per misclassified one.
-* **One candidate** (`BHSV25.Alg.card_roundIndep_thrBits_ge`): if `w` is within `κ / n` of
-  `P u`, the rounding of the vertices where `w ≥ 0` is an independent set of at least
-  `|I| - K (n/2 - |I|)` vertices, for `K = (1 + η) 4 / (1 - θ) + 2 (1 + 1/η) κ²` and any `η > 0`
-  with `(1 + 1/η) κ² < 1`. Sizes are integers: either `|I| = n / 2`, and then the precision
-  `κ / n` recovers `I` exactly, or `n / 2 - |I| ≥ 1/2`, which absorbs the loss `κ² / n` of the
-  precision.
+
+`BHSV25/Alg/IndepSetGS.lean` combines them for one candidate at constant precision
+(`BHSV25.Alg.card_roundIndep_thrBits_ge`).
 -/
 
 @[expose] public section
@@ -282,115 +279,5 @@ theorem card_misclassified_le {n : ℕ} (hn : 0 < n) (I : Finset (Fin n)) (w : F
   exact this
 
 /-! ### One candidate -/
-
-open Classical in
-/-- **One candidate** [BHSV25, Lemmas 7.22 and 7.23]: if `w` is within `κ / n` of the projection
-of `signVec I` onto the span of the eigenvectors with eigenvalue at most `-θ`, the rounding of the
-vertices where `w ≥ 0` is an independent set of at least `|I| - K (n/2 - |I|)` vertices, where
-`K = (1 + η) 4 / (1 - θ) + 2 (1 + 1/η) κ²`. -/
-theorem card_roundIndep_thrBits_ge (G : Graph) {d : ℕ} (hd : G.2.IsRegularOfDegree d)
-    (hd0 : d ≠ 0) (hn : 0 < G.1) {I : Finset (Fin G.1)} (hI : G.2.IsIndepSet (I : Set (Fin G.1)))
-    {θ κ η : ℝ} (hθ1 : θ < 1) (hη : 0 < η) (hκ : (1 + 1 / η) * κ ^ 2 < 1) (c : List ℚ)
-    (hc : (Net.vecOf G.1 c - Spectral.proj G.normAdj_isHermitian (· ≤ -θ) (signVec I)) ⬝ᵥ
-        (Net.vecOf G.1 c - Spectral.proj G.normAdj_isHermitian (· ≤ -θ) (signVec I)) ≤
-      (κ / G.1) ^ 2) :
-    (I.card : ℝ) - ((1 + η) * 4 / (1 - θ) + 2 * (1 + 1 / η) * κ ^ 2) * (G.1 / 2 - I.card) ≤
-      (G.vertexSet (roundIndep G.1 (adjTable G) (thrBits G.1 c))).card := by
-  classical
-  set u := signVec I with hu
-  set P := Spectral.proj G.normAdj_isHermitian (· ≤ -θ) u with hP
-  set w := Net.vecOf G.1 c with hw
-  set Ih := G.vertexSet (thrBits G.1 c) with hIh
-  set R := G.vertexSet (roundIndep G.1 (adjTable G) (thrBits G.1 c)) with hR
-  have hn' : (0 : ℝ) < G.1 := Nat.cast_pos.2 hn
-  have hn1 : (1 : ℝ) ≤ G.1 := Nat.one_le_cast.2 hn
-  have hθ' : 0 < 1 - θ := by linarith only [hθ1]
-  have hη' : 0 < 1 + 1 / η := by positivity
-  -- the vertices where `w ≥ 0`
-  have hIh' : Ih = Finset.univ.filter fun x ↦ 0 ≤ w x := by
-    ext x
-    rw [hIh, mem_vertexSet_thrBits, Finset.mem_filter]
-    exact ⟨fun h ↦ ⟨Finset.mem_univ _, h⟩, fun h ↦ h.2⟩
-  -- the rounding loses at most the misclassified vertices
-  set D := (I.filter fun x ↦ w x < 0).card + ((Finset.univ.filter fun x ↦ 0 ≤ w x) \ I).card
-    with hD
-  have hloss : I.card ≤ R.card + D := by
-    have h1 := card_inter_le_card_roundIndep G (thrBits G.1 c) hI
-    rw [← hIh, ← hR] at h1
-    have h2 : (Ih ∩ I).card + (I.filter fun x ↦ w x < 0).card = I.card := by
-      have hsplit := Finset.card_filter_add_card_filter_not (s := I) (fun x ↦ 0 ≤ w x)
-      have e1 : Ih ∩ I = I.filter fun x ↦ 0 ≤ w x := by
-        ext x
-        rw [hIh', Finset.mem_inter, Finset.mem_filter, Finset.mem_filter]
-        exact ⟨fun h ↦ ⟨h.2, h.1.2⟩, fun h ↦ ⟨⟨Finset.mem_univ _, h.2⟩, h.1⟩⟩
-      have e2 : (I.filter fun x ↦ ¬0 ≤ w x) = I.filter fun x ↦ w x < 0 :=
-        Finset.filter_congr fun x _ ↦ not_le
-      rw [e1, ← e2]
-      exact hsplit
-    rw [hIh'] at h1
-    rw [hIh'] at h2
-    omega
-  -- the misclassified vertices
-  have hmis := card_misclassified_le hn I w
-  rw [← hD] at hmis
-  -- the distance of `u` to the bottom eigenspace
-  have hq : u ⬝ᵥ (G.normAdj *ᵥ u) = 1 - 4 * I.card / G.1 := quad_signVec G hd hd0 hn hI
-  have hu1 : u ⬝ᵥ u = 1 := signVec_dot_self hn I
-  have hdist : (1 - θ) * ((u - P) ⬝ᵥ (u - P)) ≤ u ⬝ᵥ (G.normAdj *ᵥ u) + u ⬝ᵥ u :=
-    one_sub_mul_dist_proj_le G θ u
-  rw [hq, hu1] at hdist
-  -- `‖w - u‖²`
-  have hwu : (w - u) ⬝ᵥ (w - u) ≤ (1 + η) * ((u - P) ⬝ᵥ (u - P)) + (1 + 1 / η) * (κ / G.1) ^ 2 := by
-    have h := dot_add_le (P - u) (w - P) hη
-    rw [show P - u + (w - P) = w - u by abel, show P - u = -(u - P) by abel, neg_dot_neg] at h
-    have := mul_le_mul_of_nonneg_left hc hη'.le
-    linarith only [h, this]
-  have h2I : 2 * I.card ≤ G.1 := two_mul_card_le G hd hd0 hI
-  have hb : (u - P) ⬝ᵥ (u - P) ≤ 4 * (G.1 / 2 - I.card) / G.1 / (1 - θ) := by
-    rw [le_div_iff₀ hθ']
-    have e : 4 * ((G.1 : ℝ) / 2 - I.card) / G.1 = 1 - 4 * I.card / G.1 + 1 := by
-      field_simp
-      ring
-    rw [e, mul_comm]
-    exact hdist
-  -- `n ‖w - u‖²`
-  have hDle : (D : ℝ) ≤ (1 + η) * 4 / (1 - θ) * (G.1 / 2 - I.card) + (1 + 1 / η) * κ ^ 2 / G.1 := by
-    have h3 : (G.1 : ℝ) * ((1 + η) * (4 * (G.1 / 2 - I.card) / G.1 / (1 - θ))) =
-        (1 + η) * 4 / (1 - θ) * (G.1 / 2 - I.card) := by
-      field_simp
-    have h4 : (G.1 : ℝ) * ((1 + 1 / η) * (κ / G.1) ^ 2) = (1 + 1 / η) * κ ^ 2 / G.1 := by
-      field_simp
-    have h5 := mul_le_mul_of_nonneg_left hb (by positivity : (0 : ℝ) ≤ 1 + η)
-    have h6' : (w - u) ⬝ᵥ (w - u) ≤ (1 + η) * (4 * (G.1 / 2 - I.card) / G.1 / (1 - θ)) +
-        (1 + 1 / η) * (κ / G.1) ^ 2 := hwu.trans (add_le_add_left h5 _)
-    have h6 := mul_le_mul_of_nonneg_left h6' (Nat.cast_nonneg G.1 : (0 : ℝ) ≤ G.1)
-    rw [mul_add, h3, h4] at h6
-    exact hmis.trans h6
-  have hg : (0 : ℝ) ≤ G.1 / 2 - I.card := by
-    have : (2 * I.card : ℝ) ≤ G.1 := by exact_mod_cast h2I
-    linarith only [this]
-  have hsmall : (1 + 1 / η) * κ ^ 2 / G.1 ≤ (1 + 1 / η) * κ ^ 2 :=
-    div_le_self (mul_nonneg hη'.le (sq_nonneg κ)) hn1
-  rcases Nat.lt_or_ge (2 * I.card) G.1 with hlt | hge
-  · -- `n / 2 - |I| ≥ 1/2`
-    have hhalf : (1 : ℝ) ≤ 2 * (G.1 / 2 - I.card) := by
-      have : (2 * I.card + 1 : ℝ) ≤ G.1 := by exact_mod_cast hlt
-      linarith only [this]
-    have h7 : (1 + 1 / η) * κ ^ 2 / G.1 ≤ 2 * (1 + 1 / η) * κ ^ 2 * (G.1 / 2 - I.card) := by
-      refine hsmall.trans ?_
-      have := mul_le_mul_of_nonneg_left hhalf (mul_nonneg hη'.le (sq_nonneg κ))
-      linarith only [this]
-    have hR' : (I.card : ℝ) ≤ R.card + D := by exact_mod_cast hloss
-    linarith only [hR', hDle, h7]
-  · -- `|I| = n / 2`: nothing is misclassified
-    have hEq : (2 * I.card : ℝ) = G.1 := by exact_mod_cast le_antisymm h2I hge
-    have hg0 : (G.1 : ℝ) / 2 - I.card = 0 := by linarith only [hEq]
-    have hD1 : (D : ℝ) < 1 := by
-      rw [hg0, mul_zero, zero_add] at hDle
-      exact (hDle.trans hsmall).trans_lt hκ
-    have hD0 : D = 0 := by exact_mod_cast Nat.lt_one_iff.1 (by exact_mod_cast hD1)
-    rw [hg0, mul_zero, sub_zero]
-    rw [hD0, add_zero] at hloss
-    exact_mod_cast hloss
 
 end BHSV25.Alg

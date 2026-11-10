@@ -5,15 +5,18 @@ public import BHSV25.Model
 /-!
 # Main results: statements
 
-The main results of [BHSV25], Theorems 1.1 to 1.9 (Corollaries 1.2 and 1.4 included), with proofs
-`sorry`. `lake comparator` checks that `Solution.lean` proves exactly these statements using only
-the axioms listed in `comparator.json`.
+The main results of [BHSV25], with proofs `sorry`. The algorithms are stated in the full versions
+of Section 7 (Theorems 7.1, 7.9 and 7.20, Corollaries 7.2 and 7.21), with their errors and running
+times, and Corollaries 1.2 and 1.4 with the running times that these give. The hardness results are
+Theorems 1.5, 1.6, 1.8 (2) and 1.9 (2), and the spectral result is Theorem 1.7. `lake comparator`
+checks that `Solution.lean` proves exactly these statements using only the axioms listed in
+`comparator.json`.
 
 What a reader has to trust is this file and what it imports: the definitions in
-`BHSV25/Model.lean` (graphs and their encoding, spectra, colorings, models), the Unique Games
-Conjecture in `Background/UniqueGames.lean`, the encodings in `Background/Encoding.lean`, CSLib's
-multitape Turing machines, complexitylib's polynomial time, `P`, `NP` and NP-hardness of promise
-problems, and Mathlib.
+`BHSV25/Model.lean` (graphs and their encoding, spectra, colorings, models, running times), the
+Unique Games Conjecture in `Background/UniqueGames.lean`, the encodings in
+`Background/Encoding.lean`, CSLib's multitape Turing machines, complexitylib's polynomial time,
+`P`, `NP` and NP-hardness of promise problems, and Mathlib.
 
 Numbers refer to the arXiv version (v2), whose counters are shared within each section.
 
@@ -24,12 +27,20 @@ Numbers refer to the arXiv version (v2), whose counters are shared within each s
   normalized adjacency matrix (`A / d` for a `d`-regular graph), and a **`λ`-one-sided expander**
   has second largest eigenvalue at most `λ` (`BHSV25.Graph.IsOneSidedExpander`). Lean reserves
   `λ`, so it is written `lam`.
-* **Algorithms** are deterministic multitape Turing machines running in time polynomial in the
-  length of the encoded graph, so in `n` (complexitylib's
-  `Turing.MultiTapeTM.ComputableInPolyTime`). "For every `λ` there is a polynomial-time
-  algorithm" lets the algorithm, and the degree of the polynomial, depend on `λ`. The algorithms
-  are not given the promised independent sets or colorings, nor their parameters.
-* **`o_{λ→0}(1)`** is a function `f` with `f λ → 0` as `λ → 0⁺`, one for all `λ`.
+* **Running times** (`BHSV25.RunsInTime A encGraph enc K C`): a deterministic multitape Turing
+  machine computes `A` in at most `K (m + 1)^C` steps on graphs whose encoding has length `m`
+  (about `n²` for `n` vertices), in polynomial space. A running time `n^{O(1)} · g(p)` of the
+  paper, for parameters `p`, is stated as: there is `C`, fixed before all parameters, such that for
+  all values of `p` some algorithm runs in time `K · m^C`. Here `K` is the paper's `g(p)` where it
+  is explicit (Theorem 7.20, Corollary 7.21), and otherwise any number depending on `p` (the
+  paper's `O_p(1)`).
+* **Algorithms depend on the parameters**, as in the paper's theorems: for all values of `δ`, `γ`,
+  `λ`, `t` and `c` there is an algorithm. They are not given the promised independent sets or
+  colorings.
+* **Constants**: an `O(·)` is a constant fixed before the parameters it does not depend on, and
+  "for `δ, γ, λ` small enough" is `δ, γ, λ < c₀` for some `c₀ > 0`. In Theorem 7.1 and
+  Corollary 7.2 both depend on the model `M` (the paper's `O_M`).
+* **`o_{λ→0}(1)`** (in Corollary 1.4) is a function `f` with `f λ → 0` as `λ → 0⁺`.
 * **Outputs**: an independent set or a vertex cover is a list of membership bits, one per vertex
   (`BHSV25.Graph.vertexSet`); a coloring is a list of colors, one per vertex, with colors `≥ k`
   read as "uncolored" (`BHSV25.Graph.color`). "`k` independent sets covering all but a `δ`
@@ -48,53 +59,60 @@ Numbers refer to the arXiv version (v2), whose counters are shared within each s
     Hsieh and Kothari). The proofs here derive Fact 8.1 from `UniqueGames.UGC` too.
   * The conclusion is `NP ⊆ P`, not `NP ⊆ BPP`, so the proofs replace the random biregular
     graphs of the paper's reductions by explicit ones.
-* Where the body has a stronger version of a statement of the introduction, the stronger version
-  is stated, and the introduction's follows from it as explained below. Algorithms keep the
-  introduction's qualitative form: errors are functions tending to `0`, and running times are
-  polynomial, without the body's explicit dependence on the parameters.
 
-## Theorem 1.1 (and Corollary 7.21)
+## Theorem 7.20
 
-For every `λ ∈ (0, 1)` and every `t` there is a polynomial-time algorithm that, given a regular
-graph with at most `t` eigenvalues larger than `λ` and an independent set of at least
-`(1/2 - γ) n` vertices for some `γ ∈ [0, 1/10]`, outputs an independent set of at least
-`(1/2 - (5 + f λ) γ) n` vertices, where `f λ → 0` (`BHSV25.independentSet_approximation`).
+For every constant `c > 0`, all `λ ∈ (0, 1)`, `t` and `γ ∈ (0, 1/4)`: an algorithm running in time
+`poly(n) · (γ / (1 - λ))^{-O(t)}` that, on regular graphs with at most `t` eigenvalues at most
+`-λ` and an independent set of `(1/2 - γ) n` vertices, outputs an independent set of at least
+`(1/2 - γ - (4 + c) γ / (1 - λ)) n` vertices (`BHSV25.independentSet_bottomRank`).
 
-* Theorem 1.1 is the case `t = 1`, of `λ`-one-sided expanders
-  (`BHSV25.Graph.IsOneSidedExpander` is `numEigGT λ ≤ 1`). Corollary 7.21, the full version,
-  allows any `t`, which only changes the running time; so does the paper's remark that the
-  algorithm extends to bounded threshold rank.
-* `λ` ranges over `(0, 1)`: the guarantee concerns `λ → 0`, and for `λ ≥ 1` every regular graph
-  has at most one eigenvalue larger than `λ`. For `λ < 1`, Corollary 4.2 with `σ = λ` bounds the
-  number of eigenvalues below `-√(2λ - λ²)`, a threshold `< 1`, which is what the proof uses.
-* The guarantee holds for every `γ ∈ [0, 1/10]` for which the graph has an independent set of
-  `(1/2 - γ) n` vertices; the algorithm does not know `γ`.
+* The degree of `poly(n)` is independent of all parameters, and the constant in `O(t)` depends
+  only on `c`. The factor is written `(D (1 + (1 - λ) / γ))^{D (t + 1)}`: the `1 +` keeps it at
+  least `1` when `γ > 1 - λ`, where the bound on the output is negative anyway.
+* The output is an independent set on every regular graph with at most `t` eigenvalues at most
+  `-λ`, whether or not it has the promised one.
+
+## Theorem 1.1 (Corollary 7.21)
+
+For every constant `c > 0`, all `λ ∈ (0, 1/2)`, `t` and `γ ∈ (0, 1/4)`: an algorithm running in
+time `poly(n) · (γ / (1 - √(2λ)))^{-O(t/λ²)}` that, on regular graphs with at most `t` eigenvalues
+larger than `λ` and an independent set of `(1/2 - γ) n` vertices, outputs an independent set of at
+least `(1/2 - γ - (4 + c) γ / (1 - √(2λ))) n` vertices (`BHSV25.independentSet_approximation`).
+
+* Theorem 1.1 is the case `t = 1`, of `λ`-one-sided expanders (`BHSV25.Graph.IsOneSidedExpander`
+  is `numEigGT λ ≤ 1`), with `γ ≤ 1/10`: the loss `γ + (4 + c) γ / (1 - √(2λ))` is
+  `(5 + o_{λ→0}(1)) γ` for small `c`. Larger `t` is the paper's remark that the algorithm
+  extends to bounded threshold rank.
+* `λ < 1/2`, so that `√(2λ) < 1`.
 * "Larger than `λ`" is strict (`BHSV25.Graph.numEigGT`), which makes the hypothesis weaker:
-  Corollary 7.21 counts the eigenvalues at least `λ`, so the proof applies it to some
-  `λ' ∈ (λ, 1)` with `λ' → 0` as `λ → 0`, such as `λ (3 - λ) / 2`.
+  Corollary 7.21 counts the eigenvalues at least `λ`. Corollary 4.2 for a threshold slightly above
+  `λ` still bounds the number of eigenvalues at most `-√(2λ)` by `t / λ²`.
+* As in Theorem 7.20, the factor is `(D (1 + (1 - √(2λ)) / γ))^{D (⌈t / λ²⌉ + 1)}`, and the
+  output is always an independent set.
 
 ## Corollary 1.2
 
 For every `ε > 0` there are `λ₀ > 0` and a polynomial-time algorithm that, on every regular
 `λ₀`-one-sided expander, outputs a vertex cover of size at most `(5/3 + ε)` times the minimum
-(`BHSV25.vertexCover_approximation`). The paper's `1.6667` is `5/3 + 1/30000`.
+(`BHSV25.vertexCover_approximation`). The paper's `1.6667` is `5/3 + 1/30000`. The paper states
+polynomial time; the running time `K · m^C` with `C` independent of `ε` is what Corollary 7.21
+gives, run for finitely many values of `γ`.
 
 ## Theorem 1.3 (Theorem 7.9)
 
-For every `λ > 0` there is a polynomial-time algorithm that, given a regular `λ`-one-sided
-expander with `3` independent sets of at most `(1/2 - f λ) n` vertices each that cover all but
-`λ n` vertices, outputs `3` independent sets covering all but `f λ · n` vertices, where
-`f λ → 0` (`BHSV25.threeColoring_balanced`). One function `f` serves for both `o_{λ→0}(1)`.
+For `δ ∈ [0, c₀)` and `γ, λ ∈ (0, c₀)`: an algorithm running in time `n^{O(1)} · O_{δ,γ,λ}(1)`
+that, on regular `λ`-one-sided expanders with a partition into `3` parts of at most `(1/2 - γ) n`
+vertices each whose inside edges are covered by `δ n` vertices (`BHSV25.Graph.IsAlmostProper`),
+outputs `3` independent sets covering all but `O(λ / γ⁸ + δ / (λ γ⁸)) n` vertices
+(`BHSV25.threeColoring_balanced`).
 
-* The introduction asks for a proper `3`-coloring. Theorem 7.9, the paper's full version, allows
-  a `3`-partition whose monochromatic edges are covered by `δ n` vertices; removing them leaves
-  `3` independent sets covering all but `δ n` vertices (and conversely, the uncovered vertices can
-  join the smallest class). This is stated in qualitative form, without Theorem 7.9's explicit
-  error and running time. In that form, taking `δ = λ` loses nothing, as both hypotheses get
-  weaker when their parameter grows.
-* Theorem 7.9's error is `O(λ + δ/λ)` times a power of `1/γ`, for `λ` the second eigenvalue.
-  With `δ = λ`, the proof uses `√λ` instead, as an upper bound on the second eigenvalue; the
-  variance bound (Lemma 6.1) only needs an upper bound.
+* Theorem 7.9 takes `λ` to be the second eigenvalue; here `λ` is any upper bound on it, which is
+  stronger, as the variance bound (Lemma 6.1) only needs an upper bound. It gives the
+  introduction's Theorem 1.3, also for almost `3`-colorable graphs: if the inside edges are
+  covered by `λ n` vertices and the second eigenvalue is at most `λ`, take the upper bound `√λ`
+  and `γ = λ^{1/18}`, for an error `O(λ^{1/18})`.
+* `δ = 0`, of proper `3`-colorings, is allowed.
 
 ## Corollary 1.4
 
@@ -104,11 +122,13 @@ of which one has at least `(1/2 - f λ) n` vertices or which together cover all 
 vertices, where `f λ → 0` (`BHSV25.threeColoring_independentSet_or_coloring`).
 
 * The introduction asks for `3`-colorable graphs; the paper notes that its algorithms for
-  `3`-colorable one-sided expanders handle almost `3`-colorable ones too, and so does the proof
-  here. Let `g` be the function of Theorem 1.3. If every class has at most `(1/2 - g λ) n`
-  vertices, Theorem 1.3 covers all but `g λ · n` vertices. Otherwise the largest class is an
-  independent set of more than `(1/2 - g λ) n` vertices, and Theorem 1.1 finds one of
-  `(1/2 - (5 + o(1)) g λ) n`. So `f` is larger than `g`, about `6 g`.
+  `3`-colorable one-sided expanders handle almost `3`-colorable ones too, and so does this
+  statement.
+* The paper states polynomial time and gives no explicit `f`. The running time `K · m^C` with `C`
+  independent of `λ` is what Theorem 7.9 and Corollary 7.21 give, with parameters depending only
+  on `λ`: if every class has at most `(1/2 - g λ) n` vertices, Theorem 7.9 covers all but `g λ · n`
+  vertices; otherwise the largest class is an independent set of more than `(1/2 - g λ) n`
+  vertices, and Corollary 7.21 with `γ = g λ` finds one of `(1/2 - O(g λ)) n`.
 
 ## Theorem 1.5 (Corollary 8.4)
 
@@ -141,42 +161,41 @@ every symmetric matrix with nonnegative entries and eigenvalues in `[-1, 1]`
 (`BHSV25.thresholdRank`), as in Theorem 4.1, the full version, whose parameter `σ` is
 `(τ² - τ') / (1 - τ')`.
 
-## Theorem 1.8 (Corollaries 7.2 and 8.3)
+## Theorems 1.8 (1) and 1.9 (1) (Corollary 7.2 and Theorem 7.1)
 
 Let `M` be a model (`BHSV25.IsModel`): a reversible row-stochastic matrix with zero diagonal and
-second largest eigenvalue at most `0`.
-1. If `M` has no repeated rows, a polynomial-time algorithm solves `M`-expander-coloring
-   (`BHSV25.expanderColoring_distinctRows`).
-2. If `M` has repeated rows then, assuming the Unique Games Conjecture, there is `δ > 0` such
+second largest eigenvalue at most `0`, with stationary distribution `π`, and let
+`α = ∑_a min(π_a, ∑_{b ≠ a, M^(b) = M^(a)} π_b)` (`BHSV25.alpha`). For `δ ∈ [0, c₀)` and
+`λ ∈ (0, c₀)`: an algorithm running in time `n^{O(1)} · O_{δ,λ,M}(1)` that, on regular
+`λ`-one-sided expanders with an `(M, δ)`-coloring (`BHSV25.Graph.MColorable`), outputs a
+`(k', α + O_M(√δ + λ + δ/λ))`-coloring, where `k'` is the number of distinct rows of `M`
+(`BHSV25.expanderColoring_algorithm`). If `M` has no repeated rows, `k' = k` and `α = 0`
+(`BHSV25.expanderColoring_distinctRows`, Corollary 7.2).
+
+* The degree of `n^{O(1)}` is independent of `M`; the constants `B` and `c₀` depend on it.
+* `k'` is `Nat.card (Set.range M)`, the number of distinct rows. Theorem 7.1's uncovered fraction
+  is `1 - ∑ p_i + …`, and `1 - ∑ p_i = α`.
+* As in Theorem 7.9, `λ` is any upper bound on the second eigenvalue. With `λ = √δ` the error is
+  `α + O_M(√δ)`, which gives the introduction's `M`-expander-coloring and
+  `(M, α)`-expander-coloring, with an algorithm for each `ε`.
+* **Reversibility** is with respect to a positive `π`: `π_a M_ab = π_b M_ba` with every `π_a > 0`.
+  The paper's printed definition (Section 3) asks only for `π ≥ 0`, but then every matrix would
+  be reversible (take `π = 0`); the paper's proofs use a positive `π` (Lemma 7.3). **`π`** is the
+  unique stationary distribution of a model; the theorem is stated for every positive `π` summing
+  to `1` in detailed balance with `M` (`BHSV25.IsStationary`).
+
+## Theorems 1.8 (2) and 1.9 (2) (Corollary 8.3 and Theorem 8.2)
+
+Let `M` be a model with stationary distribution `π`.
+1. If `M` has repeated rows then, assuming the Unique Games Conjecture, there is `δ > 0` such
    that for all `ε, λ > 0` no polynomial-time algorithm finds a `(k, δ)`-coloring of every
    regular `λ`-one-sided expander with an `(M, ε)`-coloring, unless `NP ⊆ P`
-   (`BHSV25.expanderColoring_repeatedRows_hardness`). This is Corollary 8.3. It gives the
-   introduction's "`M`-expander-coloring is NP-hard" in the form of hardness used here (an
-   algorithm solving it gives `NP ⊆ P`): take `ε = δ/2` in the definition of
-   `BHSV25.SolvesExpanderColoring`, and its `δ'` as both `ε` and `λ` here.
-
-## Theorem 1.9 (Theorems 7.1 and 8.2)
-
-Let `M` be a model with stationary distribution `π`, and
-`α = ∑_a min(π_a, ∑_{b ≠ a, M^(b) = M^(a)} π_b)` (`BHSV25.alpha`).
-1. A polynomial-time algorithm solves `(M, α)`-expander-coloring
-   (`BHSV25.expanderColoring_algorithm`).
+   (`BHSV25.expanderColoring_repeatedRows_hardness`). This is Corollary 8.3, which gives the
+   introduction's "`M`-expander-coloring is NP-hard" in the form of hardness used here.
 2. Assuming the Unique Games Conjecture, for all `γ, ε, λ > 0`, no polynomial-time algorithm finds a
    `(k, α - γ)`-coloring of every regular `λ`-one-sided expander with an `(M, ε)`-coloring, unless
    `NP ⊆ P` (`BHSV25.expanderColoring_hardness`). This is Theorem 8.2; it gives the
-   introduction's "`(M, α - γ)`-expander-coloring is NP-hard", in the same form, as for
-   Theorem 1.8.
-
-Details:
-* **Reversibility** is with respect to a positive `π`, as Lemma 7.3 uses.
-* **`π`** is the unique stationary distribution of a model; the theorem is stated for every
-  positive `π` summing to `1` in detailed balance with `M` (`BHSV25.IsStationary`).
-* **One algorithm for every `ε`**, as in the paper's definition of `(M, α)`-expander-coloring.
-  Theorem 7.1's algorithm depends on `δ` and `λ`, but it enumerates a net of a subspace of
-  dimension `O_M(1)`; a net of precision `1/poly(n)` takes polynomial time and serves every `δ`
-  at once. The guarantee holds at every size: on the graphs that are `(M, δ)`-colorable
-  `δ`-one-sided expanders for all `δ > 0`, the algorithm leaves at most `α n` vertices uncovered.
-* `(k', ·)`-colorings with `k' ≤ k` (Theorem 7.1) are `(k, ·)`-colorings with empty classes.
+   introduction's "`(M, α - γ)`-expander-coloring is NP-hard" in the same form.
 -/
 
 public section
@@ -187,26 +206,48 @@ open Filter Topology Turing.MultiTapeTM UniqueGames
 
 /-! ### Independent sets and vertex covers -/
 
-/-- **Theorem 1.1** of [BHSV25] (Corollary 7.21): for every `λ ∈ (0, 1)` and every `t`, a
-polynomial-time algorithm that, on regular graphs with at most `t` eigenvalues larger than `λ`
-(`λ`-one-sided expanders for `t = 1`) and an independent set of `(1/2 - γ) n` vertices for some
-`γ ∈ [0, 1/10]`, outputs an independent set of at least `(1/2 - (5 + f λ) γ) n` vertices, where
-`f λ → 0` as `λ → 0`. -/
-theorem independentSet_approximation :
-    ∃ f : ℝ → ℝ, Tendsto f (𝓝[>] 0) (𝓝 0) ∧
-      ∀ lam : ℝ, 0 < lam → lam < 1 → ∀ t : ℕ,
-        ∃ A : Graph → List Bool, ComputableInPolyTime A encGraph Encoding.encBits ∧
-          ∀ G : Graph, G.IsRegular → G.numEigGT lam ≤ t →
+/-- **Theorem 7.20** of [BHSV25]: for every `c > 0`, `λ ∈ (0, 1)`, `t` and `γ ∈ (0, 1/4)`, an
+algorithm running in time `poly(n) · (γ / (1 - λ))^{-O(t)}` that, on regular graphs with at most
+`t` eigenvalues at most `-λ` and an independent set of `(1/2 - γ) n` vertices, outputs an
+independent set of at least `(1/2 - γ - (4 + c) γ / (1 - λ)) n` vertices. -/
+theorem independentSet_bottomRank :
+    ∃ C : ℕ, ∀ c : ℝ, 0 < c → ∃ D : ℕ, ∀ lam : ℝ, 0 < lam → lam < 1 → ∀ t : ℕ,
+      ∀ γ : ℝ, 0 < γ → γ < 1 / 4 →
+        ∃ A : Graph → List Bool,
+          RunsInTime A encGraph Encoding.encBits
+            (((D : ℝ) * (1 + (1 - lam) / γ)) ^ (D * (t + 1))) C ∧
+          ∀ G : Graph, G.IsRegular → (Finset.univ.filter fun i ↦ G.eig i ≤ -lam).card ≤ t →
             G.2.IsIndepSet (G.vertexSet (A G) : Set (Fin G.1)) ∧
-            ∀ γ : ℝ, 0 ≤ γ → γ ≤ 1 / 10 → G.HasIndepSet ((1 / 2 - γ) * G.1) →
-              (1 / 2 - (5 + f lam) * γ) * G.1 ≤ (G.vertexSet (A G)).card :=
+            (G.HasIndepSet ((1 / 2 - γ) * G.1) →
+              (1 / 2 - γ - (4 + c) * γ / (1 - lam)) * G.1 ≤ (G.vertexSet (A G)).card) :=
   sorry
 
-/-- **Corollary 1.2** of [BHSV25]: for every `ε > 0`, a polynomial-time `(5/3 + ε)`-approximation
-algorithm for vertex cover on regular `λ₀`-one-sided expanders, for some `λ₀ > 0`. -/
+/-- **Theorem 1.1** of [BHSV25], full version (Corollary 7.21): for every `c > 0`,
+`λ ∈ (0, 1/2)`, `t` and `γ ∈ (0, 1/4)`, an algorithm running in time
+`poly(n) · (γ / (1 - √(2λ)))^{-O(t/λ²)}` that, on regular graphs with at most `t` eigenvalues
+larger than `λ` (`λ`-one-sided expanders for `t = 1`) and an independent set of `(1/2 - γ) n`
+vertices, outputs an independent set of at least `(1/2 - γ - (4 + c) γ / (1 - √(2λ))) n`
+vertices. -/
+theorem independentSet_approximation :
+    ∃ C : ℕ, ∀ c : ℝ, 0 < c → ∃ D : ℕ, ∀ lam : ℝ, 0 < lam → lam < 1 / 2 → ∀ t : ℕ,
+      ∀ γ : ℝ, 0 < γ → γ < 1 / 4 →
+        ∃ A : Graph → List Bool,
+          RunsInTime A encGraph Encoding.encBits
+            (((D : ℝ) * (1 + (1 - Real.sqrt (2 * lam)) / γ)) ^
+              (D * (⌈(t : ℝ) / lam ^ 2⌉₊ + 1))) C ∧
+          ∀ G : Graph, G.IsRegular → G.numEigGT lam ≤ t →
+            G.2.IsIndepSet (G.vertexSet (A G) : Set (Fin G.1)) ∧
+            (G.HasIndepSet ((1 / 2 - γ) * G.1) →
+              (1 / 2 - γ - (4 + c) * γ / (1 - Real.sqrt (2 * lam))) * G.1 ≤
+                (G.vertexSet (A G)).card) :=
+  sorry
+
+/-- **Corollary 1.2** of [BHSV25]: for every `ε > 0`, a `(5/3 + ε)`-approximation algorithm for
+vertex cover on regular `λ₀`-one-sided expanders, for some `λ₀ > 0`, running in time `K · m^C`
+with `C` independent of `ε`. -/
 theorem vertexCover_approximation :
-    ∀ ε : ℝ, 0 < ε → ∃ lam₀ : ℝ, 0 < lam₀ ∧
-      ∃ A : Graph → List Bool, ComputableInPolyTime A encGraph Encoding.encBits ∧
+    ∃ C : ℕ, ∀ ε : ℝ, 0 < ε → ∃ lam₀ : ℝ, 0 < lam₀ ∧ ∃ K : ℝ,
+      ∃ A : Graph → List Bool, RunsInTime A encGraph Encoding.encBits K C ∧
         ∀ G : Graph, G.IsRegular → G.IsOneSidedExpander lam₀ →
           G.IsVertexCover (G.vertexSet (A G)) ∧
           ((G.vertexSet (A G)).card : ℝ) ≤ (5 / 3 + ε) * G.vertexCoverNumber :=
@@ -214,28 +255,30 @@ theorem vertexCover_approximation :
 
 /-! ### Algorithms for 3-colorable one-sided expanders -/
 
-/-- **Theorem 1.3** of [BHSV25] (Theorem 7.9): for every `λ > 0`, a polynomial-time algorithm that,
-on regular `λ`-one-sided expanders with `3` independent sets of at most `(1/2 - f λ) n` vertices
-each that cover all but `λ n` vertices, outputs `3` independent sets covering all but `f λ · n`
-vertices, where `f λ → 0` as `λ → 0`. -/
+/-- **Theorem 1.3** of [BHSV25], full version (Theorem 7.9): for `δ ∈ [0, c₀)` and
+`γ, λ ∈ (0, c₀)`, an algorithm running in time `n^{O(1)} · O_{δ,γ,λ}(1)` that, on regular
+`λ`-one-sided expanders with a partition into `3` parts of at most `(1/2 - γ) n` vertices each
+whose inside edges are covered by `δ n` vertices, outputs `3` independent sets covering all but
+`O(λ / γ⁸ + δ / (λ γ⁸)) n` vertices. -/
 theorem threeColoring_balanced :
-    ∃ f : ℝ → ℝ, Tendsto f (𝓝[>] 0) (𝓝 0) ∧
-      ∀ lam : ℝ, 0 < lam →
-        ∃ A : Graph → List ℕ, ComputableInPolyTime A encGraph encColoring ∧
+    ∃ C : ℕ, ∃ B c₀ : ℝ, 0 < c₀ ∧ ∀ δ γ lam : ℝ, 0 ≤ δ → δ < c₀ → 0 < γ → γ < c₀ →
+      0 < lam → lam < c₀ →
+        ∃ K : ℝ, ∃ A : Graph → List ℕ, RunsInTime A encGraph encColoring K C ∧
           ∀ G : Graph, G.IsRegular → G.IsOneSidedExpander lam →
-            (∃ c, G.IsColoring 3 lam c ∧
-              ∀ a < 3, (G.classSize 3 c a : ℝ) ≤ (1 / 2 - f lam) * G.1) →
-            G.IsColoring 3 (f lam) (A G) :=
+            (∃ χ : Fin G.1 → Fin 3, G.IsAlmostProper χ δ ∧
+              ∀ a, ((Finset.univ.filter (χ · = a)).card : ℝ) ≤ (1 / 2 - γ) * G.1) →
+            G.IsColoring 3 (B * (lam + δ / lam) / γ ^ 8) (A G) :=
   sorry
 
-/-- **Corollary 1.4** of [BHSV25]: for every `λ > 0`, a polynomial-time algorithm that, on regular
-`λ`-one-sided expanders with `3` independent sets covering all but `λ n` vertices, outputs `3`
-independent sets of which one has at least `(1/2 - f λ) n` vertices or which cover all but
-`f λ · n` vertices, where `f λ → 0` as `λ → 0`. -/
+/-- **Corollary 1.4** of [BHSV25]: for every `λ > 0`, an algorithm running in time `K · m^C`, with
+`C` independent of `λ`, that, on regular `λ`-one-sided expanders with `3` independent sets
+covering all but `λ n` vertices, outputs `3` independent sets of which one has at least
+`(1/2 - f λ) n` vertices or which cover all but `f λ · n` vertices, where `f λ → 0` as
+`λ → 0`. -/
 theorem threeColoring_independentSet_or_coloring :
-    ∃ f : ℝ → ℝ, Tendsto f (𝓝[>] 0) (𝓝 0) ∧
-      ∀ lam : ℝ, 0 < lam →
-        ∃ A : Graph → List ℕ, ComputableInPolyTime A encGraph encColoring ∧
+    ∃ f : ℝ → ℝ, Tendsto f (𝓝[>] 0) (𝓝 0) ∧ ∃ C : ℕ,
+      ∀ lam : ℝ, 0 < lam → ∃ K : ℝ,
+        ∃ A : Graph → List ℕ, RunsInTime A encGraph encColoring K C ∧
           ∀ G : Graph, G.IsRegular → G.IsOneSidedExpander lam → G.HasColoring 3 lam →
             G.IsPartialColoring 3 (A G) ∧
             ((∃ a < 3, (1 / 2 - f lam) * G.1 ≤ G.classSize 3 (A G) a) ∨
@@ -295,12 +338,16 @@ theorem thresholdRank_graph (G : Graph) (τ τ' : ℝ) (hτ : 0 < τ) (hτ' : τ
 
 /-! ### The meta-theorems -/
 
-/-- **Theorem 1.8 (1)** of [BHSV25] (Corollary 7.2): for every model `M` without repeated rows, a
-polynomial-time algorithm solves `M`-expander-coloring. -/
-theorem expanderColoring_distinctRows {k : ℕ} (M : Matrix (Fin k) (Fin k) ℝ) (hM : IsModel M)
-    (hrows : Function.Injective M) :
-    ∃ A : Graph → List ℕ, ComputableInPolyTime A encGraph encColoring ∧
-      SolvesExpanderColoring M 0 A :=
+/-- **Theorem 1.8 (1)** of [BHSV25], full version (Corollary 7.2): for every model `M` without
+repeated rows, `δ ∈ [0, c₀)` and `λ ∈ (0, c₀)`, an algorithm running in time
+`n^{O(1)} · O_{δ,λ,M}(1)` that, on regular `λ`-one-sided expanders with an `(M, δ)`-coloring,
+outputs a `(k, O_M(√δ + λ + δ/λ))`-coloring. -/
+theorem expanderColoring_distinctRows :
+    ∃ C : ℕ, ∀ (k : ℕ) (M : Matrix (Fin k) (Fin k) ℝ), IsModel M → Function.Injective M →
+      ∃ B c₀ : ℝ, 0 < c₀ ∧ ∀ δ lam : ℝ, 0 ≤ δ → δ < c₀ → 0 < lam → lam < c₀ →
+        ∃ K : ℝ, ∃ A : Graph → List ℕ, RunsInTime A encGraph encColoring K C ∧
+          ∀ G : Graph, G.IsRegular → G.IsOneSidedExpander lam → G.MColorable M δ →
+            G.IsColoring k (B * (Real.sqrt δ + lam + δ / lam)) (A G) :=
   sorry
 
 /-- **Theorem 1.8 (2)** of [BHSV25] (Corollary 8.3): assuming the Unique Games
@@ -316,13 +363,19 @@ theorem expanderColoring_repeatedRows_hardness (hUGC : UGC) {k : ℕ}
         NPSubsetP :=
   sorry
 
-/-- **Theorem 1.9 (1)** of [BHSV25] (Theorem 7.1): for every model `M` with stationary
-distribution `π`, a polynomial-time algorithm solves `(M, α)`-expander-coloring, where
-`α = ∑_a min(π_a, ∑_{b ≠ a, M^(b) = M^(a)} π_b)`. -/
-theorem expanderColoring_algorithm {k : ℕ} (M : Matrix (Fin k) (Fin k) ℝ) (hM : IsModel M)
-    (π : Fin k → ℝ) (hπ : IsStationary M π) :
-    ∃ A : Graph → List ℕ, ComputableInPolyTime A encGraph encColoring ∧
-      SolvesExpanderColoring M (alpha M π) A :=
+/-- **Theorem 1.9 (1)** of [BHSV25], full version (Theorem 7.1): for every model `M` with
+stationary distribution `π`, `δ ∈ [0, c₀)` and `λ ∈ (0, c₀)`, an algorithm running in time
+`n^{O(1)} · O_{δ,λ,M}(1)` that, on regular `λ`-one-sided expanders with an `(M, δ)`-coloring,
+outputs a `(k', α + O_M(√δ + λ + δ/λ))`-coloring, where `k'` is the number of distinct rows of
+`M` and `α = ∑_a min(π_a, ∑_{b ≠ a, M^(b) = M^(a)} π_b)`. -/
+theorem expanderColoring_algorithm :
+    ∃ C : ℕ, ∀ (k : ℕ) (M : Matrix (Fin k) (Fin k) ℝ) (π : Fin k → ℝ), IsModel M →
+      IsStationary M π →
+      ∃ B c₀ : ℝ, 0 < c₀ ∧ ∀ δ lam : ℝ, 0 ≤ δ → δ < c₀ → 0 < lam → lam < c₀ →
+        ∃ K : ℝ, ∃ A : Graph → List ℕ, RunsInTime A encGraph encColoring K C ∧
+          ∀ G : Graph, G.IsRegular → G.IsOneSidedExpander lam → G.MColorable M δ →
+            G.IsColoring (Nat.card (Set.range M))
+              (alpha M π + B * (Real.sqrt δ + lam + δ / lam)) (A G) :=
   sorry
 
 /-- **Theorem 1.9 (2)** of [BHSV25] (Theorem 8.2): assuming the Unique Games

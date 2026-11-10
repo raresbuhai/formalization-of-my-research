@@ -304,7 +304,6 @@ theorem zi_of {P : Prop} [Decidable P] (h : P) : zi P = 1 := by unfold zi; rw [i
 theorem zi_of_not {P : Prop} [Decidable P] (h : ¬ P) : zi P = 0 := by
   unfold zi; rw [ite_eq_right h]
 
-
 theorem sum_ty4 (f : X.HU → ℤ) (g : Fin (2 * X.H) → ℤ) (h : Fin X.m → ℤ)
     (l : Fin (X.m + 1) → ℤ) :
     ∑ τ : X.Ty, f τ.1 * g τ.2.1 * h τ.2.2.1 * l τ.2.2.2 =

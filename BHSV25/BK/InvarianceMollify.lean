@@ -166,7 +166,6 @@ lemma hasDerivAt_conv {G : ℝ → ℝ} (hGc : Continuous G) {A L : ℝ} (hA : 0
       ring)
   exact key.2
 
-
 /-- `H_P G (y) = ∫ G(t) P(t - y) φ(t - y) dt`. -/
 noncomputable def convH (G P : ℝ → ℝ) (y : ℝ) : ℝ := ∫ t, G t * (P (t - y) * npdf (t - y))
 
@@ -345,7 +344,6 @@ lemma moment4 : ∫ t, t ^ 4 * npdf t = 3 := by
     integral_const_mul, integral_const_mul, moment2, integral_npdf] at h
   linarith
 
-
 lemma lip_continuous {G : ℝ → ℝ} {L : ℝ} (hL : 0 ≤ L) (hG : ∀ x y, |G x - G y| ≤ L * |x - y|) :
     Continuous G :=
   (LipschitzWith.of_dist_le_mul (K := ⟨L, hL⟩) fun x y => by
@@ -465,7 +463,6 @@ theorem smooth1d {G : ℝ → ℝ} {L : ℝ} (hL : 0 ≤ L) (hG : ∀ x y, |G x 
     change |deriv (deriv (deriv (convH G (hP 0)))) y| ≤ 6 * L
     rw [D 0 (by norm_num), D 1 (by norm_num), D 2 (by norm_num)]
     exact convH_hP3_bound hL hG y
-
 
 /-! ### Two dimensions -/
 
@@ -605,7 +602,6 @@ lemma abs_moll_sub_le {Ψ : ℝ → ℝ → ℝ} {K η : ℝ} (hη : 0 < η) (h�
         have := integral_abs_coord_le 1
         gcongr
     _ = 2 * K * η := by ring
-
 
 /-- Along a line with direction `(a', b') ≠ 0`, the mollification is a one-dimensional Gaussian
 smoothing (rotate the Gaussian so that its first coordinate is along `(a', b')`). -/

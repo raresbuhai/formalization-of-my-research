@@ -108,9 +108,6 @@ theorem cons_add_cons (w w' : Gam0 a) (z z' : Fin r → Gam0 a) :
   funext i
   refine Fin.cases ?_ ?_ i <;> simp
 
-theorem sum_sq_cons (X : (Fin (r + 1) → Gam0 a) → ℝ) :
-    ∑ z, X z ^ 2 = ∑ w, ∑ z', X (Fin.cons w z') ^ 2 := sum_cons _
-
 /-- **Products of pseudo-random sets are pseudo-random**, in the form `Γ₀ × Γ₀^r = Γ₀^(r+1)`. -/
 theorem pr_cons {f : Gam0 a → Prop} {g : (Fin r → Gam0 a) → Prop} {ρ₁ e₁ ρ₂ e₂ : ℝ}
     (hf : PR f ρ₁ e₁) (hg : PR g ρ₂ e₂) (he₁ : 0 ≤ e₁) :

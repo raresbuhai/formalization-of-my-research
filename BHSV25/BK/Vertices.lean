@@ -50,19 +50,6 @@ theorem ofFn_eq_range_map {n : ℕ} {β : Type*} (f : ℕ → β) :
 
 theorem vEquiv_u (m L : ℕ) (x : Fin (P.nV m L)) : ((P.vEquiv m L x).2 : ℕ) = x % m := rfl
 
-theorem vEquiv_k (m L : ℕ) (x : Fin (P.nV m L)) (p : Fin P.t) :
-    ((P.vEquiv m L x).1.2 p : ℕ) = x / m % L ^ P.t / L ^ (p : ℕ) % L := rfl
-
-theorem vEquiv_a (m L : ℕ) (x : Fin (P.nV m L)) (j : Fin P.R) :
-    ((P.vEquiv m L x).1.1.1 j : ℕ) = x / m / L ^ P.t / 2 ^ P.R / P.M ^ (j : ℕ) % P.M := rfl
-
-theorem vEquiv_z (m L : ℕ) (x : Fin (P.nV m L)) (j : Fin P.R) :
-    (P.vEquiv m L x).1.1.2 j = decide (x / m / L ^ P.t % 2 ^ P.R / 2 ^ (j : ℕ) % 2 = 1) := by
-  have key : ∀ (d : ℕ) (h : d < 2), ((⟨d, h⟩ : Fin 2) == 1) = decide (d = 1) := by
-    intro d h
-    interval_cases d <;> rfl
-  exact key _ _
-
 /-- **The digits of the vertex numbered `x`** are those of its tuple. -/
 theorem rv_eq (m L : ℕ) (x : Fin (P.nV m L)) : P.rv m L x = P.rvS (P.vEquiv m L x) := by
   unfold rv rvS

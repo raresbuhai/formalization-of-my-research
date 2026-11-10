@@ -11,7 +11,7 @@ a finite type `ι`, in terms of the normalized adjacency matrix `Ã`.
 * **Partitions** (`BHSV25.Alg.part`, `BHSV25.Alg.wt`, `BHSV25.Alg.intWt`, `BHSV25.Alg.pmodel`):
   the parts `V_a`, the weights `D_x(a) = ∑_{y ∈ V_a} Ã_xy`, the weight `∑_{χ x = χ y} Ã_xy` of the
   edges inside the parts, and the model `M_ab = 𝔼_{x ∈ V_a} D_x(b)` (`BHSV25.Graph.model`, for
-  parts indexed by `ι`; `BHSV25.Alg.model_eq_pmodel`).
+  parts indexed by `ι`).
 * **Lemma 6.1** (`BHSV25.Alg.disp_le`): in a regular graph with at most one eigenvalue above `L`,
   for `0 < L < 1`, the dispersion `∑_{x ∈ V_a} (D_x(b) - M_ab)²` is at most `I / L + L n`, where `I`
   is the weight of the edges inside the parts. The paper states it with `L` the second eigenvalue
@@ -66,8 +66,6 @@ noncomputable def lift (χ : Fin G.1 → ι) (z : ι → ℝ) : Fin G.1 → ℝ 
 noncomputable def symModel (χ : Fin G.1 → ι) : Matrix ι ι ℝ :=
   fun a b ↦ (∑ x ∈ part G χ a, wt G χ x b) /
     Real.sqrt ((part G χ a).card * (part G χ b).card)
-
-theorem model_eq_pmodel {k : ℕ} (χ : Fin G.1 → Fin k) : G.model χ = pmodel G χ := rfl
 
 variable {G}
 
@@ -153,15 +151,6 @@ theorem sum_card_mul_pmodel [Fintype ι] {d : ℕ} (h : G.2.IsRegularOfDegree d)
         sum_congr rfl fun x _ ↦ sum_congr rfl fun y _ ↦ normAdj_symm x y
     _ = ∑ y ∈ part G χ b, ∑ x, G.normAdj y x := Finset.sum_comm
     _ = (part G χ b).card := by simp [sum_normAdj h hd]
-
-open Classical in
-/-- The rows of the model sum to `1`. -/
-theorem sum_pmodel [Fintype ι] {d : ℕ} (h : G.2.IsRegularOfDegree d) (hd : d ≠ 0) (χ : Fin G.1 → ι)
-    (a : ι) (ha : (part G χ a).Nonempty) : ∑ b, pmodel G χ a b = 1 := by
-  have hpos : (0 : ℝ) < (part G χ a).card := by exact_mod_cast ha.card_pos
-  simp only [pmodel, ← sum_div]
-  rw [sum_comm, div_eq_one_iff_eq hpos.ne']
-  simp [sum_wt h hd]
 
 /-! ### Lemma 6.1 -/
 
@@ -417,12 +406,6 @@ theorem intWt_le_of_cover {d : ℕ} (h : G.2.IsRegularOfDegree d) (χ : Fin G.1 
 
 theorem lift_apply (χ : Fin G.1 → ι) (z : ι → ℝ) (x : Fin G.1) :
     lift G χ z x = z (χ x) / Real.sqrt (part G χ (χ x)).card := rfl
-
-theorem lift_add (χ : Fin G.1 → ι) (z z' : ι → ℝ) : lift G χ (z + z') = lift G χ z + lift G χ z' :=
-  funext fun x ↦ by simp [lift, add_div]
-
-theorem lift_sub (χ : Fin G.1 → ι) (z z' : ι → ℝ) : lift G χ (z - z') = lift G χ z - lift G χ z' :=
-  funext fun x ↦ by simp [lift, sub_div]
 
 theorem lift_smul (χ : Fin G.1 → ι) (c : ℝ) (z : ι → ℝ) : lift G χ (c • z) = c • lift G χ z :=
   funext fun x ↦ by simp [lift, mul_div_assoc]

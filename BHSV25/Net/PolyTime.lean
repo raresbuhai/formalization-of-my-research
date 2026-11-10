@@ -9,17 +9,15 @@ public import Complexity.Computability.Machines.Turing.MultiTape.Complexity.Poly
 public import Complexity.Computability.Machines.Turing.MultiTape.Encodings.Length
 
 /-!
-# The nets are computed in polynomial time
+# Integer matrices in polynomial time
 
-Certificates (`Turing.MultiTapeTM.ComputableInPolyTime`) for the functions of
-`BHSV25/Net/Machine.lean`, ending with `BHSV25.Net.netList_polytime`.
+Certificates (`Turing.MultiTapeTM.ComputableInPolyTime`) for the operations of
+`BHSV25/Net/Machine.lean`, and small combinators used by the machines of the algorithms.
 
-Encodings: the number of vertices, the degree, the exponent, the range of the coefficients, the
-budget and the entries of the tuples are in unary (all are polynomial in the input); matrices are
-lists of rows of binary integers. The only loop is the matrix power: its states are `N × N`
-matrices with entries at most `N^(2i)` after `i` steps, so their encodings have at most
-`O(N³ e)` bits for the `e = O(log N)` steps (`BHSV25.Net.length_powL_le`). The number `N` of
-vertices is at most the length of the table (`BHSV25.Net.numV_le`).
+Encodings: the number of vertices and the degree are in unary (both are at most the length of the
+input, `BHSV25.Net.numV_le`); matrices are lists of rows of binary integers. The states of the
+matrix power `M^e` are `N × N` matrices with entries at most `N^(2i)` after `i` steps, so their
+encodings have `O(N³ e)` bits (`BHSV25.Net.length_powL_le`).
 -/
 
 @[expose] public section
@@ -43,7 +41,7 @@ abbrev encVs : List ℕ ↪ List Bool := encList encUnary
 abbrev encIn : ℕ × List Bool ↪ List Bool := encPair encNat encBits
 
 /-- A case distinction on a decidable proposition. -/
-private theorem ite_prop {β : Type} {encB : β ↪ List Bool} {p : α → Prop} [DecidablePred p]
+theorem ite_prop {β : Type} {encB : β ↪ List Bool} {p : α → Prop} [DecidablePred p]
     {f g : α → β} (hp : ComputableInPolyTime (fun a => decide (p a)) input encBool)
     (hf : ComputableInPolyTime f input encB) (hg : ComputableInPolyTime g input encB) :
     ComputableInPolyTime (fun a => if p a then f a else g a) input encB := by
@@ -51,7 +49,7 @@ private theorem ite_prop {β : Type} {encB : β ↪ List Bool} {p : α → Prop}
   simpa only [decide_eq_true_eq] using this
 
 /-- A unary natural, in binary. -/
-private theorem toBinary' {f : α → ℕ} (hf : ComputableInPolyTime f input encUnary) :
+theorem toBinary' {f : α → ℕ} (hf : ComputableInPolyTime f input encUnary) :
     ComputableInPolyTime f input encNat :=
   .of_tidy (ComputableTidilyInPolyTime.unary_to_binary.comp (g := f) hf.tidy)
 
@@ -59,11 +57,6 @@ private theorem toBinary' {f : α → ℕ} (hf : ComputableInPolyTime f input en
 
 theorem numV_polytime : ComputableInPolyTime numV encIn encUnary :=
   binary_min_unary' (length_bits_comp (snd _ _)) (fst _ _)
-
-@[fun_prop]
-theorem numV' {f : α → ℕ × List Bool} (hf : ComputableInPolyTime f input encIn) :
-    ComputableInPolyTime (fun a ↦ numV (f a)) input encUnary :=
-  numV_polytime.comp hf
 
 theorem deg_polytime : ComputableInPolyTime (fun p : ℕ × List Bool ↦ deg p.1 p.2)
     (encPair encUnary encBits) encUnary := by
@@ -79,16 +72,16 @@ theorem deg' {f : α → ℕ} {g : α → List Bool} (hf : ComputableInPolyTime 
 /-! ### Integers -/
 
 /-- A unary natural, as a binary integer. -/
-private theorem intOfUnary' {f : α → ℕ} (hf : ComputableInPolyTime f input encUnary) :
+theorem intOfUnary' {f : α → ℕ} (hf : ComputableInPolyTime f input encUnary) :
     ComputableInPolyTime (fun a ↦ (f a : ℤ)) input encIntBin :=
   intBin_natCast.comp (toBinary' hf)
 
-private theorem intSub' {f g : α → ℤ} (hf : ComputableInPolyTime f input encIntBin)
+theorem intSub' {f g : α → ℤ} (hf : ComputableInPolyTime f input encIntBin)
     (hg : ComputableInPolyTime g input encIntBin) :
     ComputableInPolyTime (fun a ↦ f a - g a) input encIntBin :=
   intBin_sub.comp (g := fun a ↦ (f a, g a)) (hf.prod hg)
 
-private theorem intSum' {f : α → List ℤ} (hf : ComputableInPolyTime f input (encList encIntBin)) :
+theorem intSum' {f : α → List ℤ} (hf : ComputableInPolyTime f input (encList encIntBin)) :
     ComputableInPolyTime (fun a ↦ (f a).sum) input encIntBin :=
   .of_tidy (ComputableTidilyInPolyTime.intBin_sum.comp hf.tidy)
 
@@ -263,127 +256,18 @@ theorem entBound_baseMat (bottom : Bool) {N d : ℕ} (tab : List Bool) (hd : d �
 
 /-! ### The context -/
 
-theorem expo_polytime (p : Params) : ComputableInPolyTime (expo p) encUnary encUnary := by
-  unfold expo
-  have hs : ComputableInPolyTime (fun N : ℕ ↦ N.size) encUnary encUnary :=
-    binary_size.comp (toBinary' id')
-  exact unary_mul' (const _) (unary_mul' (const _) (unary_add' (const _) (unary_mul' (const 2) hs)))
-
 theorem numV_le (x : ℕ × List Bool) : numV x ≤ (encIn x).length := by
   have h : (encIn x).length = (encPair encNat encBits x).length := rfl
   rw [h, length_encPair, encBits_apply]
   unfold numV
   omega
 
-theorem expo_le (p : Params) (N : ℕ) : expo p N ≤ 2 * (p.c * (p.a + 2 * N)) := by
-  unfold expo
-  have h1 : N.size ≤ N := Nat.size_le.2 N.lt_two_pow_self
-  have h2 : (if p.bottom then 1 else 2) ≤ 2 := by split_ifs <;> omega
-  exact Nat.mul_le_mul h2 (Nat.mul_le_mul_left _ (by omega))
-
-/-- The matrix power, in polynomial time. -/
-theorem powCtx_polytime (p : Params) : ComputableInPolyTime
-    (fun x ↦ powL (numV x) (baseMat p.bottom (numV x) (deg (numV x) x.2) x.2)
-      (expo p (numV x))) encIn encMat := by
-  have hN : ComputableInPolyTime numV encIn encUnary := numV_polytime
-  have hM : ComputableInPolyTime
-      (fun x : ℕ × List Bool ↦ baseMat p.bottom (numV x) (deg (numV x) x.2) x.2) encIn encMat :=
-    (baseMat_polytime p.bottom).comp (g := fun x ↦ ((numV x, deg (numV x) x.2), x.2))
-      (by fun_prop)
-  unfold powL
-  set size : ℕ × List Bool → ℕ := fun x ↦ (encIn x).length
-  have hs : PolyBounded size size := .self
-  have hG : PolyBounded size (fun x ↦ size x * (2 * (size x * (2 * (2 *
-      (2 * (p.c * (p.a + 2 * size x))) * size x + 2) + 1)) + 1)) :=
-    hs.mul (((PolyBounded.const 2).mul (hs.mul (((PolyBounded.const 2).mul ((((PolyBounded.const
-      2).mul ((PolyBounded.const 2).mul ((PolyBounded.const p.c).mul ((PolyBounded.const
-      p.a).add ((PolyBounded.const 2).mul hs))))).mul hs).add (.const 2))).add
-      (.const 1)))).add (.const 1))
-  refine iterateWith (par := fun x ↦ (numV x, baseMat p.bottom (numV x) (deg (numV x) x.2) x.2))
-    (count := fun x ↦ expo p (numV x)) (init := fun x ↦ idL (numV x))
-    (step := fun q X ↦ mulL q.1 X q.2) (hN.prod hM) ((expo_polytime p).comp hN)
-    (idL_polytime.comp hN) mulL_polytime
-    (bound := fun x ↦ numV x * (2 * (numV x * (2 * (2 * expo p (numV x) * numV x + 2) + 1)) + 1))
-    ?_ ?_
-  · refine hG.mono fun x ↦ ?_
-    have h1 := numV_le x
-    have h2 := (expo_le p (numV x)).trans
-      (Nat.mul_le_mul_left 2 (Nat.mul_le_mul_left p.c (Nat.add_le_add_left
-        (Nat.mul_le_mul_left 2 h1) p.a)))
-    simp only [size]
-    gcongr
-  · intro x i hi
-    refine (length_powL_le (entBound_baseMat p.bottom x.2 (deg_le _ _)) i).trans ?_
-    gcongr
-
-theorem zMax_polytime (p : Params) : ComputableInPolyTime (zMax p) encUnary encUnary := by
-  unfold zMax
-  exact unary_mul' (const _) ((unary_pow p.Ze).comp (unary_add' id' (const 1)))
-
-theorem budget_polytime (p : Params) : ComputableInPolyTime (budget p) encUnary encUnary := by
-  unfold budget
-  exact (unary_pow p.T).comp
-    (unary_add' (unary_add' id' (unary_mul' (const 2) (zMax_polytime p))) (const 1))
-
-private theorem binMul' {f g : α → ℕ} (hf : ComputableInPolyTime f input encNat)
-    (hg : ComputableInPolyTime g input encNat) :
-    ComputableInPolyTime (fun a ↦ f a * g a) input encNat :=
-  .of_tidy (ComputableTidilyInPolyTime.binary_mul' hf.tidy hg.tidy)
-
-theorem den_polytime (p : Params) : ComputableInPolyTime
-    (fun x : ℕ × List Bool ↦
-      ((p.K * numV x * denBase p (deg (numV x) x.2) ^ expo p (numV x) : ℕ) : ℚ)) encIn encRat := by
-  refine rat_natCast' (binMul' (binMul' (const _) (toBinary' numV_polytime)) ?_)
-  unfold denBase
-  exact binary_pow' (binMul' (const _) (toBinary' (by fun_prop)))
-    ((expo_polytime p).comp numV_polytime)
-
-/-- The context of the candidates: `N`, `Z`, `q`, `Q` and the budget. -/
-abbrev encCtx : ℕ × ℕ × ℚ × List (List ℤ) × ℕ ↪ List Bool :=
-  encPair encUnary (encPair encUnary (encPair encRat (encPair encMat encUnary)))
-
-theorem ctx_polytime (p : Params) : ComputableInPolyTime (ctx p) encIn encCtx := by
-  unfold ctx
-  exact numV_polytime.prod (((zMax_polytime p).comp numV_polytime).prod ((den_polytime p).prod
-    ((powCtx_polytime p).prod ((budget_polytime p).comp numV_polytime))))
-
 /-! ### The candidates -/
 
 /-- `List.range` of a unary number. -/
-private theorem rangeU' {f : α → ℕ} (hf : ComputableInPolyTime f input encUnary) :
+theorem rangeU' {f : α → ℕ} (hf : ComputableInPolyTime f input encUnary) :
     ComputableInPolyTime (fun a ↦ List.range (f a)) input (encList encUnary) :=
   .of_tidy (ComputableTidilyInPolyTime.range.comp hf.tidy)
-
-theorem cand_polytime (T : ℕ) : ComputableInPolyTime
-    (fun y : (ℕ × ℕ × ℚ × List (List ℤ)) × List ℕ × List ℕ ↦
-      cand T y.1.1 y.1.2.1 y.1.2.2.1 y.1.2.2.2 y.2.1 y.2.2)
-    (encPair (encPair encUnary (encPair encUnary (encPair encRat encMat))) (encPair encVs encVs))
-    (encList encRat) := by
-  unfold cand
-  refine mapWithInput (by fun_prop)
-    (rat_div' (rat_intCast' (intSum' (mapWithInput (rangeU' (const T)) ?_))) (by fun_prop))
-  exact intBin_mul' (intSub' (intOfUnary' (by fun_prop)) (intOfUnary' (by fun_prop)))
-    (by fun_prop)
-
-private theorem tuplesU' {f g h : α → ℕ} (hf : ComputableInPolyTime f input encUnary)
-    (hg : ComputableInPolyTime g input encUnary) (hh : ComputableInPolyTime h input encUnary) :
-    ComputableInPolyTime (fun a ↦ Tuples.tuples (f a) (g a) (h a)) input (encList encVs) :=
-  Tuples.tuples_unary_polytime.comp (g := fun a ↦ (f a, g a, h a)) (hf.prod (hg.prod hh))
-
-theorem body_polytime (T : ℕ) :
-    ComputableInPolyTime (body T) encCtx (encList (encList encRat)) := by
-  unfold body
-  refine flatMapWithInput (tuplesU' (by fun_prop) (by fun_prop) (const T))
-    (mapWithInput (tuplesU' (by fun_prop) (by fun_prop) (const T)) ?_)
-  exact (cand_polytime T).comp (g := fun q : ((ℕ × ℕ × ℚ × List (List ℤ) × ℕ) × List ℕ) × List ℕ ↦
-    ((q.1.1.1, q.1.1.2.1, q.1.1.2.2.1, q.1.1.2.2.2.1), q.1.2, q.2)) (by fun_prop)
-
-/-- **The net is computed in polynomial time.** -/
-theorem netList_polytime (p : Params) :
-    ComputableInPolyTime (netList p) (Encoding.encPair Encoding.encNat Encoding.encBits)
-      (Encoding.encList (Encoding.encList Encoding.encRat)) := by
-  unfold netList
-  exact cons' (const []) ((body_polytime p.T).comp (ctx_polytime p))
 
 end Net
 

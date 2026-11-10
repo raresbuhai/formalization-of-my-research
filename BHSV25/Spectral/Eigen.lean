@@ -17,8 +17,7 @@ definitionally equal to them; the toolkit's lemmas are proved by the ones here.
   `xᵀ A x = ∑ μᵢ cᵢ²`.
 * **Counting eigenvalues** (Courant–Fischer): if the only vector of the span of the eigenvectors
   with eigenvalues in `S` orthogonal to `r` given vectors is `0`, at most `r` eigenvalues lie in `S`
-  (`BHSV25.Spectral.Impl.card_le_of_inEigSpan`), and Weyl's inequality in counting form
-  (`BHSV25.Spectral.Impl.card_gt_le_of_quad_le`).
+  (`BHSV25.Spectral.Impl.card_le_of_inEigSpan`).
 -/
 
 @[expose] public section
@@ -65,14 +64,6 @@ theorem dotProduct_eq_sum_coeff (hA : A.IsHermitian) (x y : ι → ℝ) :
   simp only [star_trivial] at h
   rw [dotProduct_comm, ← h]
   exact Finset.sum_congr rfl fun i _ ↦ by rw [real_inner_comm]
-
-theorem coeff_add (hA : A.IsHermitian) (i : ι) (x y : ι → ℝ) :
-    coeff hA i (x + y) = coeff hA i x + coeff hA i y :=
-  dotProduct_add _ _ _
-
-theorem coeff_sub (hA : A.IsHermitian) (i : ι) (x y : ι → ℝ) :
-    coeff hA i (x - y) = coeff hA i x - coeff hA i y :=
-  dotProduct_sub _ _ _
 
 theorem coeff_smul (hA : A.IsHermitian) (i : ι) (c : ℝ) (x : ι → ℝ) :
     coeff hA i (c • x) = c * coeff hA i x := by
@@ -127,14 +118,6 @@ theorem quad_eq (hA : A.IsHermitian) (x : ι → ℝ) :
   refine Finset.sum_congr rfl fun i _ ↦ ?_
   ring
 
-omit [DecidableEq ι] in
-theorem dotProduct_mulVec_comm (hA : A.IsHermitian) (x y : ι → ℝ) :
-    x ⬝ᵥ (A *ᵥ y) = y ⬝ᵥ (A *ᵥ x) := by
-  classical
-  rw [dotProduct_mulVec_eq hA x y, dotProduct_mulVec_eq hA y x]
-  refine Finset.sum_congr rfl fun i _ ↦ ?_
-  ring
-
 theorem coeff_sum_smul_eigenvector (hA : A.IsHermitian) (i : ι) (s : Finset ι) (c : ι → ℝ) :
     coeff hA i (∑ j ∈ s, c j • ⇑(hA.eigenvectorBasis j)) = if i ∈ s then c i else 0 := by
   rw [coeff_sum]
@@ -153,15 +136,6 @@ theorem inEigSpan_proj (hA : A.IsHermitian) (S : ℝ → Prop) (x : ι → ℝ) 
   classical
   intro i hi
   rw [coeff_proj, ite_eq_right hi]
-
-theorem proj_eq_self (hA : A.IsHermitian) {S : ℝ → Prop} {x : ι → ℝ} (h : InEigSpan hA S x) :
-    proj hA S x = x := by
-  classical
-  refine eq_of_coeff_eq hA fun i ↦ ?_
-  rw [coeff_proj]
-  split_ifs with hi
-  · rfl
-  · exact (h i hi).symm
 
 open Classical in
 /-- **Courant–Fischer, counting form**: if the only vector in the span of the eigenvectors with
@@ -204,15 +178,6 @@ theorem card_le_of_inEigSpan (hA : A.IsHermitian) (S : ℝ → Prop) {r : ℕ} (
   have := LinearMap.finrank_le_finrank_of_injective hinj
   simpa [Module.finrank_fintype_fun_eq_card] using this
 
-theorem quad_ge_of_inEigSpan (hA : A.IsHermitian) {τ : ℝ} {x : ι → ℝ}
-    (h : InEigSpan hA (τ ≤ ·) x) : τ * (x ⬝ᵥ x) ≤ x ⬝ᵥ (A *ᵥ x) := by
-  rw [quad_eq hA, ← sum_coeff_sq hA, Finset.mul_sum]
-  refine Finset.sum_le_sum fun i _ ↦ ?_
-  by_cases hi : τ ≤ hA.eigenvalues i
-  · exact mul_le_mul_of_nonneg_right hi (sq_nonneg _)
-  · rw [h i hi]
-    simp
-
 theorem quad_gt_of_inEigSpan (hA : A.IsHermitian) {τ : ℝ} {x : ι → ℝ}
     (h : InEigSpan hA (τ < ·) x) (hx : x ≠ 0) : τ * (x ⬝ᵥ x) < x ⬝ᵥ (A *ᵥ x) := by
   rw [quad_eq hA, ← sum_coeff_sq hA, Finset.mul_sum]
@@ -237,30 +202,6 @@ theorem quad_le_of_inEigSpan (hA : A.IsHermitian) {τ : ℝ} {x : ι → ℝ}
   · exact mul_le_mul_of_nonneg_right hi (sq_nonneg _)
   · rw [h i hi]
     simp
-
-/-- **Weyl's inequality**, counting form: if `xᵀ A x ≤ xᵀ B x + ε ‖x‖²` for every `x`, then `A`
-has at most as many eigenvalues above `τ + ε` as `B` has above `τ`. -/
-theorem card_gt_le_of_quad_le (hA : A.IsHermitian) (hB : B.IsHermitian) {ε : ℝ}
-    (h : ∀ x, x ⬝ᵥ (A *ᵥ x) ≤ x ⬝ᵥ (B *ᵥ x) + ε * (x ⬝ᵥ x)) (τ : ℝ) :
-    (Finset.univ.filter fun i ↦ τ + ε < hA.eigenvalues i).card ≤
-      (Finset.univ.filter fun i ↦ τ < hB.eigenvalues i).card := by
-  classical
-  set F := Finset.univ.filter fun i ↦ τ < hB.eigenvalues i with hF
-  let e := F.equivFin
-  have key := card_le_of_inEigSpan hA (τ + ε < ·)
-    (fun j ↦ ⇑(hB.eigenvectorBasis (e.symm j : ι))) ?_
-  · convert key
-  intro x hx hw
-  have hxB : InEigSpan hB (· ≤ τ) x := by
-    intro i hi
-    have hiF : i ∈ F := by simpa [hF] using hi
-    have := hw (e ⟨i, hiF⟩)
-    simpa [coeff] using this
-  by_contra hx0
-  have h1 := quad_gt_of_inEigSpan hA hx hx0
-  have h2 := quad_le_of_inEigSpan hB hxB
-  have h3 := h x
-  linarith
 
 end Impl
 

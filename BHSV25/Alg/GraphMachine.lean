@@ -53,11 +53,6 @@ theorem numV_graph (G : Graph) : numV (G.1, adjTable G) = G.1 := by
 theorem numV_polytime : ComputableInPolyTime numV (encPair encNat encBits) encUnary :=
   binary_min_unary' (unary_add' (length_bits_comp (snd _ _)) (const 1)) (fst _ _)
 
-@[fun_prop]
-theorem numV' {f : α → ℕ × List Bool} (hf : ComputableInPolyTime f input (encPair encNat encBits)) :
-    ComputableInPolyTime (fun x ↦ numV (f x)) input encUnary :=
-  numV_polytime.comp hf
-
 /-! ### Adjacency -/
 
 /-- The adjacency bit of `u` and `v` in the table `a` of a graph on `n` vertices: `a[u n + v]`
@@ -143,11 +138,6 @@ theorem map_vertexSet (G : Graph) (b : List Bool) :
 theorem card_vertexSet (G : Graph) (b : List Bool) : (G.vertexSet b).card = numTrue G.1 b := by
   rw [numTrue, ← List.toFinset_card_of_nodup (nodup_bitsToList _ _), ← map_vertexSet,
     Finset.card_map]
-
-theorem vertexSet_listToBits_bitsToList (G : Graph) (b : List Bool) :
-    G.vertexSet (listToBits G.1 (bitsToList G.1 b)) = G.vertexSet b := by
-  ext v
-  rw [mem_vertexSet_listToBits, mem_vertexSet_iff]
 
 /-! ### Certificates -/
 

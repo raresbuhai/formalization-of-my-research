@@ -127,12 +127,6 @@ lemma sum_derC_sq (c : Cube (Fin R) → ℝ) (i : Fin R) : ∑ s, derC c i s ^ 2
   refine Finset.sum_congr rfl fun s _ => ?_
   by_cases hs : s i = true <;> simp [hs]
 
-lemma restC_restC (c : Cube (Fin R) → ℝ) (i : Fin R) : restC (restC c i) i = restC c i := by
-  funext s; unfold restC; by_cases hs : s i = true <;> simp [hs]
-
-lemma derC_restC (c : Cube (Fin R) → ℝ) (i : Fin R) : derC (restC c i) i = 0 := by
-  funext s; unfold restC derC; by_cases hs : s i = true <;> simp [hs]
-
 lemma restC_derC (c : Cube (Fin R) → ℝ) (i : Fin R) : restC (derC c i) i = derC c i := by
   funext s; unfold restC derC; by_cases hs : s i = true <;> simp [hs]
 
@@ -141,11 +135,6 @@ lemma derC_derC (c : Cube (Fin R) → ℝ) (i : Fin R) : derC (derC c i) i = 0 :
 
 lemma mlEval_zero (x : Fin R → ℝ) : mlEval (0 : Cube (Fin R) → ℝ) x = 0 := by
   simp [mlEval]
-
-/-- `mlEval (restC c i)` and `mlEval (derC c i)` do not depend on `xᵢ`. -/
-lemma mlEval_restC_update (c : Cube (Fin R) → ℝ) (i : Fin R) (x : Fin R → ℝ) (t : ℝ) :
-    mlEval (restC c i) (Function.update x i t) = mlEval (restC c i) x := by
-  rw [mlEval_update, restC_restC, derC_restC, mlEval_zero, mul_zero, add_zero]
 
 lemma mlEval_derC_update (c : Cube (Fin R) → ℝ) (i : Fin R) (x : Fin R → ℝ) (t : ℝ) :
     mlEval (derC c i) (Function.update x i t) = mlEval (derC c i) x := by
@@ -158,7 +147,6 @@ lemma continuous_mlEval' (c : Cube (Fin R) → ℝ) : Continuous (fun x : Fin R 
   by_cases h : s j = true
   · simp only [h, ite_true]; exact continuous_apply j
   · simp only [h]; exact continuous_const
-
 
 /-! ### Taylor expansion along a line and one replacement -/
 
@@ -303,7 +291,6 @@ lemma one_coord {Φ : ℝ → ℝ → ℝ} {K B : ℝ} (hK : LipPair Φ K) (hB :
       _ ≤ _ := abs_sub _ _
   linarith
 
-
 /-! ### Moments of multilinear polynomials under product laws -/
 
 lemma integrable_abs_mlEval_pow (ν : Fin R → Measure ℝ) (hν : ∀ i, GoodLaw (ν i))
@@ -383,7 +370,6 @@ lemma moment3_le (ν : Fin R → Measure ℝ) (hν : ∀ i, GoodLaw (ν i)) {d :
         3 ^ d * (r ^ 2 * r) := by
       field_simp; ring
     linarith
-
 
 /-! ### Splitting off one coordinate of a product measure -/
 
@@ -550,7 +536,6 @@ lemma replace_one {d : ℕ} (c e : Cube (Fin R) → ℝ) (hc : ∀ s, d < sdeg s
     _ ≤ 20 / 3 * B * (3 ^ d * inflC c i ^ (3 / 2 : ℝ) + 3 ^ d * inflC e i ^ (3 / 2 : ℝ)) := by
         gcongr
     _ = _ := by ring
-
 
 /-! ### The endpoints of the hybrid argument -/
 

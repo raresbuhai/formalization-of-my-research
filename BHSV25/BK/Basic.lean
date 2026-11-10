@@ -59,18 +59,6 @@ variable {I : Type*} [Fintype I] [DecidableEq I]
 
 /-! ### Linearity of the coefficients -/
 
-theorem coefficient_add' (f g : Cube I → ℝ) (s : Cube I) :
-    coefficient (fun x ↦ f x + g x) s = coefficient f s + coefficient g s := by
-  unfold coefficient
-  rw [← Finset.expect_add_distrib]
-  exact Finset.expect_congr rfl fun x _ ↦ by ring
-
-theorem coefficient_const_mul (a : ℝ) (f : Cube I → ℝ) (s : Cube I) :
-    coefficient (fun x ↦ a * f x) s = a * coefficient f s := by
-  unfold coefficient
-  rw [Finset.mul_expect]
-  exact Finset.expect_congr rfl fun x _ ↦ by ring
-
 theorem coefficient_div_const (a : ℝ) (f : Cube I → ℝ) (s : Cube I) :
     coefficient (fun x ↦ f x / a) s = coefficient f s / a := by
   unfold coefficient
@@ -220,12 +208,6 @@ theorem list_sum_group {α : Type*} (l : List α) (key : α → ℕ) {m : ℕ} (
 theorem list_sum_const_one {α : Type*} (l : List α) : (l.map fun _ ↦ (1 : ℝ)).sum = l.length := by
   simp
 
-theorem list_sum_div {α : Type*} (l : List α) (φ : α → ℝ) (a : ℝ) :
-    (l.map fun x ↦ φ x / a).sum = (l.map φ).sum / a := by
-  induction l with
-  | nil => simp
-  | cons b l ih => simp only [List.map_cons, List.sum_cons, ih, add_div]
-
 /-- The constraints of a valid instance are grouped by their left vertex. -/
 theorem sum_nbrs {G : UGInstance} (hv : UGValid G) (φ : UGConstraint → ℝ) :
     (G.2.2.2.map φ).sum = ∑ u ∈ range G.1, ((nbrs G.2.2.2 u).map φ).sum :=
@@ -318,11 +300,6 @@ theorem le_ugValue (G : UGInstance) (σ : Fin G.1 → Fin G.2.2.1) (τ : Fin G.2
 theorem ugValue_eq (G : UGInstance) : ugValue G =
     ⨆ (σ : Fin G.1 → Fin G.2.2.1) (τ : Fin G.2.1 → Fin G.2.2.1),
       (ugSatisfied G (lab σ) (lab τ) : ℝ) / G.2.2.2.length := rfl
-
-theorem ugValue_le_one (G : UGInstance) : ugValue G ≤ 1 := by
-  rw [ugValue_eq]
-  refine Real.iSup_le (fun σ ↦ Real.iSup_le (fun τ ↦ ?_) zero_le_one) zero_le_one
-  exact div_le_one_of_le₀ (by exact_mod_cast List.length_filter_le _ _) (Nat.cast_nonneg _)
 
 /-- A labeling attaining the value, if the value is positive. -/
 theorem exists_opt_labeling (G : UGInstance) (h : 0 < ugValue G) :

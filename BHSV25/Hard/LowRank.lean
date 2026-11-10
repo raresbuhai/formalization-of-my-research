@@ -85,10 +85,6 @@ theorem chat_neg (m : ℕ) (X : Fin 5 → ℝ) (hX : ∀ l, ∑ i, wt l i * X i 
   rw [hX1, hX4]
   nlinarith [sq_nonneg (X 0), sq_nonneg (X 2 + X 3 / 4), sq_nonneg (X 3)]
 
-theorem W_diag (m a : ℕ) (u : Fin ((design m).template a).C) :
-    ((design m).template a).W u u = (design m).W0 ((design m).typ a u) ((design m).typ a u) := by
-  simp [Design.Wc, Design.typ]
-
 open Classical in
 /-- **The spectrum of the blow-up**: at most two eigenvalues above `ε`, at most seven above `ε`
 in absolute value. -/

@@ -217,16 +217,6 @@ theorem sh_sh (H : ℕ) (u : Fin (2 * H)) : sh H (sh H u) = u := by
   · have h' : ((sh H u : Fin (2 * H)) : ℕ) < H := by rw [sh_val_ge h]; have := u.2; omega
     rw [sh_val_lt h', sh_val_ge h]; omega
 
-theorem sh_bijective (H : ℕ) : Function.Bijective (sh H) :=
-  Function.Involutive.bijective (sh_sh H)
-
-/-- Counting is invariant under the shift. -/
-theorem card_filter_sh (H : ℕ) (P : Fin (2 * H) → Prop) [DecidablePred P] :
-    (univ.filter fun u ↦ P (sh H u)).card = (univ.filter P).card := by
-  refine card_bij (fun u _ ↦ sh H u) (fun u hu ↦ by simpa using hu)
-    (fun u _ v _ h ↦ (sh_bijective H).1 h) (fun v hv ↦ ⟨sh H v, ?_, sh_sh H v⟩)
-  simpa [sh_sh] using hv
-
 theorem pt_sh_lt {H : ℕ} {u : Fin (2 * H)} (h : (u : ℕ) < H) :
     pt (2 * H) (sh H u) = pt (2 * H) u + 1 / 2 := by
   have hH : (0 : ℝ) < H := by exact_mod_cast (lt_of_le_of_lt (Nat.zero_le _) h)
