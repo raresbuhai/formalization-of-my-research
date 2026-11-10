@@ -8,8 +8,7 @@ theorem) and Lemma 5.1 (spectral concentration of the percolated hypercube), sta
 The formal proof follows the paper's argument in outline, though some of its steps take a
 different route (see [below](#how-the-proof-is-implemented)).
 
-Numbers refer to the arXiv version (v1). The paper has no venue yet, so the key uses the arXiv
-year.
+Numbers refer to the arXiv version (v1).
 
 ## The statements
 

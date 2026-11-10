@@ -15,9 +15,7 @@ and 11 are larger than the paper's, and their running times are polynomial in th
 The formal proof follows the paper's argument in outline, though some of its steps take a
 different route (see [below](#how-the-proof-is-implemented)).
 
-Numbers refer to the arXiv version (v2) of G. Bresler, R.-D. Buhai, *Learning Restricted
-Boltzmann Machines with Sparse Latent Variables*, NeurIPS 2020,
-[arXiv:2006.04166](https://arxiv.org/abs/2006.04166).
+Numbers refer to the arXiv version (v2).
 
 ## The statements
 

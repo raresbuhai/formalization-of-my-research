@@ -28,11 +28,12 @@ What a reader has to trust is this file and what it imports: the definitions in 
   * it may be any function, measurable or not, may use the label of the point, and may depend on
     `M` and `n`; it is applied to each point separately, so it does not depend on the other points
     of the sample, nor on the algorithm's coins.
-  * The tolerance is measured with `Σ`, so, like the model, it is invariant under affine maps of
-    `ℝ^d`. An absolute tolerance `‖r (i, y) - y‖ ≤ δ` would make the theorems false for any `δ`
-    depending only on `n, d, k` and the weights: their hypotheses do not change when the whole
-    mixture is shrunk, and once all points lie within `δ` of `0` the rounding may map them all
-    to `0`.
+  * The tolerance is measured with `Σ`, so the condition is invariant, like the model, under
+    invertible affine maps of `ℝ^d`; that the rounded points are rational is preserved only by
+    rational maps. An absolute tolerance `‖r (i, y) - y‖ ≤ δ` would make the theorems false for
+    any `δ` depending only on `n, d, k` and the weights: their hypotheses do not change when the
+    whole mixture is shrunk, and once all points lie within `δ` of `0` the rounding may map them
+    all to `0`.
   * The tolerance is explicit, so short roundings exist. Rounding every coordinate to a multiple
     of a power of two `h ≤ min (1, 2 √λ_min(Σ) / (n √d))` stays within it, since the error is then
     at most `√d h / 2` in Euclidean norm. As `h ≤ 1`, a coordinate `y_j` then takes
@@ -53,7 +54,10 @@ What a reader has to trust is this file and what it imports: the definitions in 
 * **Constants.** One natural number `C` stands for all the paper's `O(·)`s and for "`C_sep` larger
   than some universal constant": the separation is at least `C log (1/wmin)` (in Theorem 1.1,
   `C ⌈1/δ⌉^C log (1/wmin)`), and `C` appears in the sample sizes and in the exponents of the
-  running times. One constant serves for all, since each statement only gets weaker as `C` grows.
+  running times. One constant serves for all: a larger `C` only strengthens the separation
+  hypothesis and weakens the sample and time bounds, and, although it also gives the algorithm
+  more coins, an algorithm for a smaller `C` can be run on the first coins it needs, whose number
+  it can compute within the larger time bound.
 * **Sample sizes.** `(p_min⁻¹ d)^O(log p_min⁻¹)` is `((d + 1) / wmin)^(C (log (1/wmin) + 1))`; the
   `+ 1`s keep it at least `1` and meaningful for `d = 0` or `wmin = 1`.
 * **Running times** are in the length `|x|` of the encoded input, which counts every bit of the

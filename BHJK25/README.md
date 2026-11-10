@@ -13,7 +13,7 @@ the paper's explicit distributions rather than "there exist".
 The formal proof follows the paper's argument in outline, though some of its steps take a
 different route (see [below](#how-the-proof-is-implemented)).
 
-Numbers refer to the arXiv version (v1). The paper appeared at FOCS 2025, hence the key.
+Numbers refer to the arXiv version (v1).
 
 ## The statements
 
