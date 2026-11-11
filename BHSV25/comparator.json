@@ -7,6 +7,8 @@
     "BHSV25.vertexCover_approximation",
     "BHSV25.threeColoring_balanced",
     "BHSV25.threeColoring_independentSet_or_coloring",
+    "BHSV25.plantedColoring_partial",
+    "BHSV25.plantedColoring_full",
     "BHSV25.threeColoring_unbalanced_hardness",
     "BHSV25.threeColoring_lowRank_hardness",
     "BHSV25.thresholdRank",

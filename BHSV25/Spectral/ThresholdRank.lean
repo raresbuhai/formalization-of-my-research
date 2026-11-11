@@ -6,10 +6,15 @@ public import BHSV25.Spectral.GraphFacts
 # Large bottom threshold rank implies large top threshold rank
 
 [BHSV25, Theorem 4.1] (Theorem 1.7 of the introduction): for a symmetric matrix `A` with
-nonnegative entries and eigenvalues in `[-1, 1]`, all `τ > 0` and `τ' < τ²`,
+nonnegative entries and eigenvalues in `[-1, 1]`, all `τ ≥ 0` and `τ' < τ²`,
 `((τ² - τ') / (1 - τ'))² · #{eigenvalues ≤ -τ} ≤ #{eigenvalues ≥ τ'}`
 (`BHSV25.Spectral.thresholdRank`), and the same for the normalized adjacency matrix of every graph
-(`BHSV25.Spectral.thresholdRank_graph`).
+(`BHSV25.Spectral.thresholdRank_graph`). In the parameters of Theorem 4.1, `λ ≥ 0` and
+`σ ∈ (0, 1)`: `σ² · #{eigenvalues ≤ -λ} ≤ #{eigenvalues ≥ (λ² - σ) / (1 - σ)}`
+(`BHSV25.Spectral.thresholdRank_sigma`). For `λ < 1` this is `τ = λ` and
+`τ' = (λ² - σ) / (1 - σ)`, with `(τ² - τ') / (1 - τ') = σ`; for `λ = 1` the threshold is `1`, and
+`τ'` between `1` and the largest eigenvalue below `1` counts the same eigenvalues; for `λ > 1` no
+eigenvalue is at most `-λ`.
 
 The proof is that of the paper, written with families of vectors instead of matrices. A positive
 semidefinite matrix `M` is given as a Gram matrix `M_ij = ∑_p y_p(i) y_p(j)` of finitely many
@@ -32,7 +37,7 @@ vectors `y_p`, so that `⟨A, M⟩ = ∑_p y_pᵀ A y_p`, `Tr M = ∑_p ‖y_p�
   hypotheses hold, and the two lemmas give `((τ² - τ') t)² ≤ (1 - τ')² · #{μ ≥ τ'} · t`.
 
 The vectors are not normalized to `Tr M = 1` as in the paper; all bounds are scaled by `t`. The
-argument applies to every `τ > 0`: when some eigenvalue is at most `-τ`, `τ ≤ 1` and `τ' < 1`, and
+argument applies to every `τ ≥ 0`: when some eigenvalue is at most `-τ`, `τ ≤ 1` and `τ' < 1`, and
 otherwise the left-hand side is `0`. Negative `τ'` needs no special care.
 -/
 
@@ -372,11 +377,11 @@ end Impl
 open Matrix Impl
 
 /-- **[BHSV25, Theorem 4.1]**, in the parameters of Theorem 1.7: for a symmetric matrix with
-nonnegative entries and eigenvalues in `[-1, 1]`, and all `τ > 0` and `τ' < τ²`,
+nonnegative entries and eigenvalues in `[-1, 1]`, and all `τ ≥ 0` and `τ' < τ²`,
 `((τ² - τ') / (1 - τ'))² · #{eigenvalues ≤ -τ} ≤ #{eigenvalues ≥ τ'}`. -/
 theorem thresholdRank {ι : Type} [Fintype ι] [DecidableEq ι] (A : Matrix ι ι ℝ)
     (hA : A.IsHermitian) (hnonneg : ∀ i j, 0 ≤ A i j) (hnorm : ∀ i, |hA.eigenvalues i| ≤ 1)
-    (τ τ' : ℝ) (hτ : 0 < τ) (hτ' : τ' < τ ^ 2) :
+    (τ τ' : ℝ) (hτ : 0 ≤ τ) (hτ' : τ' < τ ^ 2) :
     ((τ ^ 2 - τ') / (1 - τ')) ^ 2 *
         ((Finset.univ.filter fun i ↦ hA.eigenvalues i ≤ -τ).card : ℝ) ≤
       (Finset.univ.filter fun i ↦ τ' ≤ hA.eigenvalues i).card := by
@@ -393,7 +398,7 @@ theorem thresholdRank {ι : Type} [Fintype ι] [DecidableEq ι] (A : Matrix ι �
     linarith only [h1, h2]
   have hθ1 : τ' < 1 := by
     have : τ ^ 2 ≤ 1 := by
-      have := mul_le_mul hτ1 hτ1 hτ.le zero_le_one
+      have := mul_le_mul hτ1 hτ1 hτ zero_le_one
       rw [sq]
       linarith only [this]
     linarith only [this, hτ']
@@ -410,7 +415,7 @@ theorem thresholdRank {ι : Type} [Fintype ι] [DecidableEq ι] (A : Matrix ι �
     have := quad_le_of_inEigSpan hA (τ := 1) (x := x) fun i hi ↦ absurd (hle1 i) hi
     linarith only [this]
   have Y3 : τ ^ 2 * t ≤ ∑ p, y p ⬝ᵥ (A *ᵥ y p) :=
-    le_sum_witnessVec_quad hnonneg hquad w hτ.le ht W1 W3
+    le_sum_witnessVec_quad hnonneg hquad w hτ ht W1 W3
   have hθt : τ' * t ≤ τ ^ 2 * t := mul_le_mul_of_nonneg_right hτ'.le ht.le
   have hX : τ' * ∑ p, y p ⬝ᵥ y p ≤ ∑ p, y p ⬝ᵥ (A *ᵥ y p) := by
     rw [Y1]
@@ -431,10 +436,67 @@ theorem thresholdRank {ι : Type} [Fintype ι] [DecidableEq ι] (A : Matrix ι �
   rw [div_pow, div_mul_eq_mul_div, div_le_iff₀ (pow_pos (sub_pos.2 hθ1) 2)]
   exact h4
 
-/-- **[BHSV25, Theorem 1.7]**: for every graph and all `τ > 0` and `τ' < τ²`, the spectrum `σ(G)`
+/-- **[BHSV25, Theorem 4.1]**: for a symmetric matrix with nonnegative entries and eigenvalues in
+`[-1, 1]`, `λ ≥ 0` and `σ ∈ (0, 1)`,
+`σ² · #{eigenvalues ≤ -λ} ≤ #{eigenvalues ≥ (λ² - σ) / (1 - σ)}`. -/
+theorem thresholdRank_sigma {ι : Type} [Fintype ι] [DecidableEq ι] (A : Matrix ι ι ℝ)
+    (hA : A.IsHermitian) (hnonneg : ∀ i j, 0 ≤ A i j) (hnorm : ∀ i, |hA.eigenvalues i| ≤ 1)
+    (lam σ : ℝ) (hlam : 0 ≤ lam) (hσ0 : 0 < σ) (hσ1 : σ < 1) :
+    σ ^ 2 * ((Finset.univ.filter fun i ↦ hA.eigenvalues i ≤ -lam).card : ℝ) ≤
+      (Finset.univ.filter fun i ↦ (lam ^ 2 - σ) / (1 - σ) ≤ hA.eigenvalues i).card := by
+  have h1σ : 0 < 1 - σ := by linarith
+  rcases lt_trichotomy lam 1 with hl | rfl | hl
+  · -- `λ < 1`: the case `τ = λ`
+    have hl2 : lam ^ 2 < 1 := by nlinarith
+    set τ' := (lam ^ 2 - σ) / (1 - σ) with hτ'
+    have hτ'lt : τ' < lam ^ 2 := by
+      rw [hτ', div_lt_iff₀ h1σ]
+      nlinarith
+    have h1τ : 1 - τ' ≠ 0 := (by linarith : (0 : ℝ) < 1 - τ').ne'
+    have hcoef : (lam ^ 2 - τ') / (1 - τ') = σ := by
+      rw [div_eq_iff h1τ, hτ']
+      field_simp
+      ring
+    have := thresholdRank A hA hnonneg hnorm lam τ' hlam hτ'lt
+    rwa [hcoef] at this
+  · -- `λ = 1`: the threshold is `1`
+    have hthr : ((1 : ℝ) ^ 2 - σ) / (1 - σ) = 1 := by rw [one_pow]; exact div_self h1σ.ne'
+    rw [hthr]
+    obtain ⟨τ', hτ'1, hτ'eq⟩ : ∃ τ' : ℝ, τ' < 1 ∧
+        ∀ i, τ' ≤ hA.eigenvalues i ↔ 1 ≤ hA.eigenvalues i := by
+      by_cases hS : (Finset.univ.filter fun i ↦ hA.eigenvalues i < 1).Nonempty
+      · obtain ⟨i₀, hi₀, hmax⟩ := Finset.exists_max_image _ hA.eigenvalues hS
+        have h0 : hA.eigenvalues i₀ < 1 := (Finset.mem_filter.1 hi₀).2
+        refine ⟨(hA.eigenvalues i₀ + 1) / 2, by linarith, fun i ↦ ⟨fun h ↦ ?_, fun h ↦ by linarith⟩⟩
+        by_contra hlt
+        push Not at hlt
+        have := hmax i (Finset.mem_filter.2 ⟨Finset.mem_univ _, hlt⟩)
+        linarith
+      · refine ⟨0, by norm_num, fun i ↦ ⟨fun _ ↦ ?_, fun h ↦ by linarith⟩⟩
+        by_contra hlt
+        push Not at hlt
+        exact hS ⟨i, Finset.mem_filter.2 ⟨Finset.mem_univ _, hlt⟩⟩
+    have h := thresholdRank A hA hnonneg hnorm 1 τ' zero_le_one (by rw [one_pow]; exact hτ'1)
+    have hc : ((1 : ℝ) ^ 2 - τ') / (1 - τ') = 1 := by
+      rw [one_pow]; exact div_self (by linarith)
+    rw [hc, one_pow, one_mul, Finset.filter_congr fun i _ ↦ hτ'eq i] at h
+    have hσ2 : σ ^ 2 ≤ 1 := by nlinarith
+    calc σ ^ 2 * ((Finset.univ.filter fun i ↦ hA.eigenvalues i ≤ -1).card : ℝ)
+        ≤ 1 * ((Finset.univ.filter fun i ↦ hA.eigenvalues i ≤ -1).card : ℝ) :=
+          mul_le_mul_of_nonneg_right hσ2 (Nat.cast_nonneg _)
+      _ ≤ _ := by rw [one_mul]; exact h
+  · -- `λ > 1`: no eigenvalue is at most `-λ`
+    have h0 : (Finset.univ.filter fun i ↦ hA.eigenvalues i ≤ -lam) = ∅ := by
+      refine Finset.filter_eq_empty_iff.2 fun i _ h ↦ ?_
+      have := (abs_le.1 (hnorm i)).1
+      linarith
+    rw [h0, Finset.card_empty, Nat.cast_zero, mul_zero]
+    exact Nat.cast_nonneg _
+
+/-- **[BHSV25, Theorem 1.7]**: for every graph and all `τ ≥ 0` and `τ' < τ²`, the spectrum `σ(G)`
 of its normalized adjacency matrix satisfies
 `((τ² - τ') / (1 - τ'))² · |σ(G) ∩ (-∞, -τ]| ≤ |σ(G) ∩ [τ', ∞)|`. -/
-theorem thresholdRank_graph (G : Graph) (τ τ' : ℝ) (hτ : 0 < τ) (hτ' : τ' < τ ^ 2) :
+theorem thresholdRank_graph (G : Graph) (τ τ' : ℝ) (hτ : 0 ≤ τ) (hτ' : τ' < τ ^ 2) :
     ((τ ^ 2 - τ') / (1 - τ')) ^ 2 * ((Finset.univ.filter fun i ↦ G.eig i ≤ -τ).card : ℝ) ≤
       (Finset.univ.filter fun i ↦ τ' ≤ G.eig i).card :=
   thresholdRank G.normAdj G.normAdj_isHermitian (Impl.normAdj_nonneg G) (Impl.abs_eig_le_one G)

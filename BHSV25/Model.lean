@@ -45,13 +45,20 @@ say.
   monochromatic edges are covered by at most `δ n` vertices.
 * **Partitions proper up to `δ n` vertices** (`BHSV25.Graph.IsAlmostProper`): the edges inside
   the parts are covered by at most `δ n` vertices, as in [BHSV25, Theorem 7.9].
+* **Random planting** (`BHSV25.Graph.plant`, [BHSV25, Definition 7.11]): a `k`-coloring `χ` of the
+  vertices of a host graph, uniform among the `k^n`, and the host without the edges inside its
+  color classes. `BHSV25.Graph.plantProb` is the probability, over `χ`, that the planted graph has
+  a given property.
 * **Running times** (`BHSV25.RunsInTime A encIn encOut K C`): a deterministic multitape Turing
   machine computes `A` in at most `⌈K (m + 1)^C⌉` steps on inputs whose encoding has length `m`,
   in polynomially bounded space (CSLib's `Turing.MultiTapeTM.ComputableInTimeAndSpaceOfLength`).
-* **Hardness** is conditional on the Unique Games Conjecture (`UniqueGames.UGC`, in
+  `BHSV25.RunsInTimeWith A encIn encOut K C` lets the factor depend on the input: one machine
+  computes `A` in at most `⌈K a (m + 1)^C⌉` steps on every input `a` of length `m`.
+* **Hardness** is conditional on the Unique Games Conjecture on graphs (`UniqueGames.KhotUGC`, in
   `Background/UniqueGames.lean`, which asks for NP-hardness of Unique Games under deterministic
-  polynomial-time reductions from every problem in `NP`). The conclusions are
-  `BHSV25.NPSubsetP`: every problem in `NP` is in `P`.
+  polynomial-time reductions from every problem in `NP`). The conclusions are NP-hardness, under
+  the same reductions, of gap problems of colorings (`BHSV25.coloringGap`): the graphs with a
+  promised property that have a `(k, δ)`-coloring against the graphs that have none.
 
 Reference: [BHSV25] R.-D. Buhai, Y. Hua, D. Steurer, A. Vári-Kakas, *Finding Colorings in
 One-Sided Expanders*, arXiv:2508.02825 (v2).
@@ -200,6 +207,23 @@ def MColorable {k : ℕ} (M : Matrix (Fin k) (Fin k) ℝ) (δ : ℝ) : Prop :=
 def IsAlmostProper {k : ℕ} (χ : Fin G.1 → Fin k) (δ : ℝ) : Prop :=
   ∃ S : Finset (Fin G.1), (S.card : ℝ) ≤ δ * G.1 ∧ ∀ u v, G.2.Adj u v → χ u = χ v → u ∈ S ∨ v ∈ S
 
+/-! ### Random planting -/
+
+/-- The graph obtained from `G` by **planting** the coloring `χ` [BHSV25, Definition 7.11]: `G`
+without the edges whose endpoints have the same color. -/
+def plant {k : ℕ} (χ : Fin G.1 → Fin k) : Graph :=
+  ⟨G.1, { Adj := fun u v ↦ G.2.Adj u v ∧ χ u ≠ χ v
+          symm := ⟨fun _ _ h ↦ ⟨h.1.symm, h.2.symm⟩⟩
+          loopless := ⟨fun u h ↦ G.2.loopless.irrefl u h.1⟩ }⟩
+
+open Classical in
+/-- The **probability** that the graph obtained by randomly planting a `k`-coloring in `G` has the
+property `E` [BHSV25, Definition 7.11]: the colors of the vertices are independent and uniform in
+`{0, …, k - 1}`, so this is the fraction of the `k^n` colorings `χ` for which `G.plant χ` has the
+property. -/
+noncomputable def plantProb (k : ℕ) (E : Graph → Prop) : ℝ :=
+  ((Finset.univ.filter fun χ : Fin G.1 → Fin k ↦ E (G.plant χ)).card : ℝ) / (k : ℝ) ^ G.1
+
 end Graph
 
 /-- A **model** [BHSV25, Sections 1 and 3]: a `k × k` matrix with nonnegative entries, rows summing
@@ -240,9 +264,28 @@ def RunsInTime {α β : Type*} (A : α → β) (encIn : α ↪ List Bool) (encOu
     Turing.MultiTapeTM.ComputableInTimeAndSpaceOfLength A encIn encOut
       (fun m ↦ ⌈K * ((m : ℝ) + 1) ^ C⌉₊) s
 
+/-- `A` **runs in time `K a · m^C` on every input `a`**, for a factor `K a` that depends on the
+input: one deterministic multitape Turing machine with a binary alphabet and finitely many states
+computes `A`, relative to the encodings `encIn` and `encOut`, in at most `⌈K a (m + 1)^C⌉` steps
+on every input `a` whose encoding has length `m`. A running time `n^{O(1)} · g(t)` for a number
+`t` read off the input, such as a count of eigenvalues, is: one algorithm runs in time `K a · m^C`
+with `K a ≤ g(t)` on the inputs with count at most `t`. -/
+def RunsInTimeWith {α β : Type*} (A : α → β) (encIn : α ↪ List Bool) (encOut : β ↪ List Bool)
+    (K : α → ℝ) (C : ℕ) : Prop :=
+  ∃ s : α → ℕ, Turing.MultiTapeTM.ComputableInTimeAndSpace A encIn encOut
+    (fun a ↦ ⌈K a * (((encIn a).length : ℝ) + 1) ^ C⌉₊) s
+
 /-! ### Hardness -/
 
-/-- **`NP ⊆ P`**: every problem in `NP`, with any encoding of its instances, is in `P`. -/
-def NPSubsetP : Prop := ∀ ⦃T : Type⦄ (enc : T ↪ List Bool), NP enc ⊆ P enc
+/-- The **gap problem of `(k, δ)`-colorings** of the graphs with property `P`: the yes-instances
+are the graphs with property `P` that have a `(k, δ)`-coloring, and the no-instances the graphs
+that have none. Its NP-hardness (`Cslib.Complexity.PromiseProblem.NPHard`) is the NP-hardness of
+finding `(k, δ)`-colorings of the graphs with property `P`: an algorithm finding
+`(k, δ')`-colorings of them, for some `δ' < δ`, tells the two apart by checking its output against
+a rational threshold between `δ'` and `δ`. -/
+def coloringGap (P : Graph → Prop) (k : ℕ) (δ : ℝ) : PromiseProblem Graph where
+  yes := {G | P G ∧ G.HasColoring k δ}
+  no := {G | ¬ G.HasColoring k δ}
+  disjoint := Set.disjoint_left.2 fun _ hyes hno ↦ hno hyes.2
 
 end BHSV25

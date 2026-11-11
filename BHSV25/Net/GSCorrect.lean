@@ -14,8 +14,10 @@ within `2 √T / N + √n 2^(T+1) ℓ / h` of a candidate of the greedy net
 
 * **the greedy bound** (`BHSV25.Net.greedy_resid_le`): the columns of `P` are their parts on the
   eigenvectors in `R`, a space of dimension at most `T`, plus a part of norm at most `ℓ`; after
-  `T` rounds every column has residual at most `2^(T+1) ℓ`;
-* **the target**: `w = P x` with `‖x‖ ≤ 1 / h`, so its residual is at most `√n ‖x‖` times that;
+  `T` rounds every column has residual at most `2^(T+1) ℓ` (`BHSV25.Net.resid_le_of_spectral`);
+* **the target**: `w = P x` with `‖x‖ ≤ 1 / h`, so its residual is at most `√n ‖x‖` times the
+  largest residual of a column, and the candidate is within `2 √T / N + √n ρ / h` of `w` when
+  every column has residual at most `ρ` (`BHSV25.Net.exists_cand_near_of_resid`);
 * **the grid** (`BHSV25.Net.exists_grid_near`): the projection of `w` onto the chosen columns is
   within `2 √T / N` of a candidate in the ball, in the scaled Gram–Schmidt coordinates that the
   machine computes (`BHSV25.Net.rtZ_eq`).
@@ -100,21 +102,19 @@ theorem evec_dotProduct (a b : ℕ) :
   · simp [ha, hb]
   · simp [ha, hb]
 
-/-- **The general net.** For a symmetric integer table `Q` with `c Q` acting on the eigenbasis of
-`A` by `φ`, `|φᵢ| ≤ ℓ` outside `R` (`|R| ≤ T`), and a target `w` supported on `R` where `φ ≥ h`,
-some candidate is within `2 √T / N + √n 2^(T+1) ℓ / h` of `w`. -/
-theorem exists_cand_near {A : Matrix (Fin n) (Fin n) ℝ} (hA : A.IsHermitian)
+/-- **The greedy bound for a filter.** For a symmetric integer table `Q` whose scaled real matrix
+`c Q` acts on the eigenbasis of `A` by `φ`, with `|φᵢ| ≤ ℓ` outside a set `R` of at most `T`
+indices, after `T` greedy rounds every column of `c Q` has residual at most `(2^(T+1) - 1) ℓ`. -/
+theorem resid_le_of_spectral {A : Matrix (Fin n) (Fin n) ℝ} (hA : A.IsHermitian)
     (Q : List (List ℤ)) (hQ : Q.length ≤ n) (hsym : ∀ u v : ℕ, rowEntry Q u v = rowEntry Q v u)
     {c : ℝ} (hc : 0 < c) (φ : Fin n → ℝ)
     (hP : ∀ i x, coeff hA i ((c • Matrix.of fun u v : Fin n ↦ (rowEntry Q u v : ℝ)) *ᵥ x) =
       φ i * coeff hA i x)
-    (R : Finset (Fin n)) {T : ℕ} (hR : R.card ≤ T) {ℓ h : ℝ} (hℓ : 0 ≤ ℓ) (hh : 0 < h)
-    (hφl : ∀ i ∉ R, |φ i| ≤ ℓ) (w : Fin n → ℝ) (hw1 : w ⬝ᵥ w ≤ 1)
-    (hw : ∀ i, coeff hA i w ≠ 0 → i ∈ R ∧ h ≤ φ i) {N B : ℕ} (hN : 0 < N)
-    (hB : BallBudget N T B) :
-    ∃ cand ∈ candsOf N B (dataOf n Q (gramRows n Q) (selOf n T (gramRows n Q))),
-      Real.sqrt ((ratVec n cand - w) ⬝ᵥ (ratVec n cand - w)) ≤
-        2 * Real.sqrt T / N + Real.sqrt n * 2 ^ (T + 1) * ℓ / h := by
+    (R : Finset (Fin n)) {T : ℕ} (hR : R.card ≤ T) {ℓ : ℝ} (hℓ : 0 ≤ ℓ)
+    (hφl : ∀ i ∉ R, |φ i| ≤ ℓ) :
+    ∀ v < n, resid (colsL (fun v ↦ c • colZ n Q v) (selOf n T (gramRows n Q))) (c • colZ n Q v) ⬝ᵥ
+        resid (colsL (fun v ↦ c • colZ n Q v) (selOf n T (gramRows n Q))) (c • colZ n Q v) ≤
+      ((2 ^ (T + 1) - 1) * ℓ) ^ 2 := by
   classical
   set col := colZ n Q with hcol
   set G := gramRows n Q with hGdef
@@ -229,12 +229,66 @@ theorem exists_cand_near {A : Matrix (Fin n) (Fin n) ℝ} (hA : A.IsHermitian)
       _ = ℓ ^ 2 * ∑ l, coeff hA l z ^ 2 := by rw [Finset.mul_sum]
       _ ≤ ℓ ^ 2 * ∑ j, cc j ^ 2 := mul_le_mul_of_nonneg_left hzz' (sq_nonneg _)
   -- the greedy bound for the columns of `P`
-  have hgreedy : ∀ v < n, resid (colsL colP S) (colP v) ⬝ᵥ resid (colsL colP S) (colP v) ≤
-      ((2 ^ (T + 1) - 1) * ℓ) ^ 2 := by
-    intro v hv
-    rw [hSselP]
-    exact greedy_resid_le colP aa bb (fun v ↦ (sub_add_cancel (colP v) (bb v)).symm) V hVdim
-      haV hℓ hb n hv
+  intro v hv
+  rw [hSselP]
+  exact greedy_resid_le colP aa bb (fun v ↦ (sub_add_cancel (colP v) (bb v)).symm) V hVdim
+    haV hℓ hb n hv
+
+/-- **The candidate near a target.** For a symmetric integer table `Q` whose scaled real matrix
+`c Q` acts on the eigenbasis of `A` by `φ`, if after `T` greedy rounds every column of `c Q` has
+residual at most `ρ`, then every vector `w` of length at most `1` whose coefficients vanish where
+`φ < h` is within `2 √T / N + √n ρ / h` of a candidate. -/
+theorem exists_cand_near_of_resid {A : Matrix (Fin n) (Fin n) ℝ} (hA : A.IsHermitian)
+    (Q : List (List ℤ)) (hQ : Q.length ≤ n) (hsym : ∀ u v : ℕ, rowEntry Q u v = rowEntry Q v u)
+    {c : ℝ} (hc : 0 < c) (φ : Fin n → ℝ)
+    (hP : ∀ i x, coeff hA i ((c • Matrix.of fun u v : Fin n ↦ (rowEntry Q u v : ℝ)) *ᵥ x) =
+      φ i * coeff hA i x)
+    {T : ℕ} {ρ h : ℝ} (hρ : 0 ≤ ρ) (hh : 0 < h)
+    (hgreedy : ∀ v < n,
+      resid (colsL (fun v ↦ c • colZ n Q v) (selOf n T (gramRows n Q))) (c • colZ n Q v) ⬝ᵥ
+        resid (colsL (fun v ↦ c • colZ n Q v) (selOf n T (gramRows n Q))) (c • colZ n Q v) ≤
+          ρ ^ 2)
+    (w : Fin n → ℝ) (hw1 : w ⬝ᵥ w ≤ 1) (hw : ∀ i, coeff hA i w ≠ 0 → h ≤ φ i) {N B : ℕ}
+    (hN : 0 < N) (hB : BallBudget N T B) :
+    ∃ cand ∈ candsOf N B (dataOf n Q (gramRows n Q) (selOf n T (gramRows n Q))),
+      Real.sqrt ((ratVec n cand - w) ⬝ᵥ (ratVec n cand - w)) ≤
+        2 * Real.sqrt T / N + Real.sqrt n * ρ / h := by
+  classical
+  set col := colZ n Q with hcol
+  set G := gramRows n Q with hGdef
+  have hG : ∀ a b, (rowEntry G a b : ℝ) = col a ⬝ᵥ col b := rowEntry_gramRows Q hQ
+  set S := selOf n T G with hSdef
+  have hSsel : S = greedySel n T (scoreR col) := selZ_eq G col hG n T
+  set P : Matrix (Fin n) (Fin n) ℝ := c • Matrix.of fun u v : Fin n ↦ (rowEntry Q u v : ℝ)
+    with hPdef
+  set colP : ℕ → Fin n → ℝ := fun v ↦ c • col v with hcolP
+  -- the columns of `P`
+  have hcolPe : ∀ v, colP v = P *ᵥ evec n v := by
+    intro v
+    funext u
+    by_cases hv : v < n
+    · simp only [hcolP, evec, hv, dite_true, mulVec_single_one, Pi.smul_apply, hPdef,
+        smul_eq_mul, hcol, colZ]
+      simp [hsym]
+    · simp only [hcolP, evec, hv, dite_false, mulVec_zero, Pi.zero_apply, Pi.smul_apply, hcol,
+        colZ]
+      rw [rowEntry_of_length_le (hQ.trans (not_lt.1 hv)), Int.cast_zero, smul_zero]
+  -- the selection is the greedy selection of the columns of `P`
+  have hcolsP : ∀ L : List ℕ, colsL colP L = fun j ↦ c • colsL col L j := fun L ↦ rfl
+  have hSselP : S = greedySel n T (scoreR colP) := by
+    rw [hSsel]
+    refine greedySel_congr (fun L v _ ↦ ?_) (fun L u _ v _ ↦ ?_)
+    · rw [scoreR, scoreR, hcolsP, det_gramF_smul_family]
+      have : (0 : ℝ) < (c * c) ^ Fintype.card (Fin (L ++ [v]).length) := by positivity
+      exact (mul_pos_iff_of_pos_left this).symm
+    · rw [scoreR, scoreR, scoreR, scoreR, hcolsP, hcolsP, det_gramF_smul_family,
+        det_gramF_smul_family]
+      have hu : (L ++ [u]).length = (L ++ [v]).length := by simp
+      simp only [Fintype.card_fin, hu]
+      have : (0 : ℝ) < (c * c) ^ (L ++ [v]).length := by positivity
+      exact (mul_lt_mul_iff_of_pos_left this).symm
+  have hgood : GoodSel col n S := by rw [hSsel]; exact goodSel_greedySeq col n T
+  have hdetS : (gramF (colsL col S)).det ≠ 0 := hgood.1.ne'
   -- the target
   set x := preimage hA φ w with hx
   have hPx : P *ᵥ x = w := by
@@ -242,7 +296,7 @@ theorem exists_cand_near {A : Matrix (Fin n) (Fin n) ℝ} (hA : A.IsHermitian)
     rw [hP, coeff_preimage]
     by_cases hl : coeff hA l w = 0
     · rw [hl]; simp
-    · have hφ := (hw l hl).2
+    · have hφ := hw l hl
       field_simp [(hh.trans_le hφ).ne']
   have hxx : x ⬝ᵥ x ≤ 1 / h ^ 2 := by
     rw [← sum_coeff_sq hA x]
@@ -253,7 +307,7 @@ theorem exists_cand_near {A : Matrix (Fin n) (Fin n) ℝ} (hA : A.IsHermitian)
           rw [coeff_preimage]
           by_cases hc0 : coeff hA l w = 0
           · simp [hc0]
-          · have hφ := (hw l hc0).2
+          · have hφ := hw l hc0
             rw [div_pow]
             exact div_le_div_of_nonneg_left (sq_nonneg _) (by positivity)
               (pow_le_pow_left₀ hh.le hφ 2)
@@ -276,18 +330,14 @@ theorem exists_cand_near {A : Matrix (Fin n) (Fin n) ℝ} (hA : A.IsHermitian)
     refine Finset.sum_congr rfl fun v _ ↦ ?_
     rw [resid_smul, hres]
   have hresid_le : Real.sqrt (resid (colsL col S) w ⬝ᵥ resid (colsL col S) w) ≤
-      Real.sqrt n * 2 ^ (T + 1) * ℓ / h := by
+      Real.sqrt n * ρ / h := by
     rw [hresid_eq]
     refine (sqrt_dot_sum_le _ _).trans ?_
     have h1 : ∀ v : Fin n, Real.sqrt ((x v • resid (colsL colP S) (colP v)) ⬝ᵥ
-        (x v • resid (colsL colP S) (colP v))) ≤ |x v| * (2 ^ (T + 1) * ℓ) := by
+        (x v • resid (colsL colP S) (colP v))) ≤ |x v| * ρ := by
       intro v
       rw [sqrt_dot_smul]
-      refine mul_le_mul_of_nonneg_left ?_ (abs_nonneg _)
-      refine Real.sqrt_le_iff.2 ⟨by positivity, (hgreedy v v.2).trans ?_⟩
-      have : (0 : ℝ) ≤ (2 ^ (T + 1) - 1) * ℓ :=
-        mul_nonneg (by have : (1 : ℝ) ≤ 2 ^ (T + 1) := one_le_pow₀ (by norm_num); linarith) hℓ
-      exact pow_le_pow_left₀ this (by nlinarith) 2
+      exact mul_le_mul_of_nonneg_left (Real.sqrt_le_iff.2 ⟨hρ, hgreedy v v.2⟩) (abs_nonneg _)
     refine (Finset.sum_le_sum fun v _ ↦ h1 v).trans ?_
     rw [← Finset.sum_mul]
     have h2 := sum_abs_le x
@@ -295,10 +345,10 @@ theorem exists_cand_near {A : Matrix (Fin n) (Fin n) ℝ} (hA : A.IsHermitian)
       rw [show 1 / h = Real.sqrt (1 / h ^ 2) by
         rw [Real.sqrt_div' 1 (sq_nonneg h), Real.sqrt_one, Real.sqrt_sq hh.le]]
       exact Real.sqrt_le_sqrt hxx
-    calc (∑ v, |x v|) * (2 ^ (T + 1) * ℓ) ≤ (Real.sqrt n * (1 / h)) * (2 ^ (T + 1) * ℓ) :=
+    calc (∑ v, |x v|) * ρ ≤ (Real.sqrt n * (1 / h)) * ρ :=
           mul_le_mul_of_nonneg_right (h2.trans (mul_le_mul_of_nonneg_left h3
-            (Real.sqrt_nonneg _))) (by positivity)
-      _ = Real.sqrt n * 2 ^ (T + 1) * ℓ / h := by ring
+            (Real.sqrt_nonneg _))) hρ
+      _ = Real.sqrt n * ρ / h := by ring
   -- the leading determinants are positive
   set k := S.length with hk
   have hSeq : S = greedySeq n (scoreR col) T := hSsel
@@ -424,6 +474,29 @@ theorem exists_cand_near {A : Matrix (Fin n) (Fin n) ℝ} (hA : A.IsHermitian)
         (Real.sqrt_le_sqrt (by exact_mod_cast hkT)) (by norm_num)) (by positivity)
     · rw [neg_dotProduct, dotProduct_neg, neg_neg]
       exact hresid_le
+
+/-- **The general net.** For a symmetric integer table `Q` with `c Q` acting on the eigenbasis of
+`A` by `φ`, `|φᵢ| ≤ ℓ` outside `R` (`|R| ≤ T`), and a target `w` supported on `R` where `φ ≥ h`,
+some candidate is within `2 √T / N + √n 2^(T+1) ℓ / h` of `w`. -/
+theorem exists_cand_near {A : Matrix (Fin n) (Fin n) ℝ} (hA : A.IsHermitian)
+    (Q : List (List ℤ)) (hQ : Q.length ≤ n) (hsym : ∀ u v : ℕ, rowEntry Q u v = rowEntry Q v u)
+    {c : ℝ} (hc : 0 < c) (φ : Fin n → ℝ)
+    (hP : ∀ i x, coeff hA i ((c • Matrix.of fun u v : Fin n ↦ (rowEntry Q u v : ℝ)) *ᵥ x) =
+      φ i * coeff hA i x)
+    (R : Finset (Fin n)) {T : ℕ} (hR : R.card ≤ T) {ℓ h : ℝ} (hℓ : 0 ≤ ℓ) (hh : 0 < h)
+    (hφl : ∀ i ∉ R, |φ i| ≤ ℓ) (w : Fin n → ℝ) (hw1 : w ⬝ᵥ w ≤ 1)
+    (hw : ∀ i, coeff hA i w ≠ 0 → i ∈ R ∧ h ≤ φ i) {N B : ℕ} (hN : 0 < N)
+    (hB : BallBudget N T B) :
+    ∃ cand ∈ candsOf N B (dataOf n Q (gramRows n Q) (selOf n T (gramRows n Q))),
+      Real.sqrt ((ratVec n cand - w) ⬝ᵥ (ratVec n cand - w)) ≤
+        2 * Real.sqrt T / N + Real.sqrt n * 2 ^ (T + 1) * ℓ / h := by
+  have hT1 : (1 : ℝ) ≤ 2 ^ (T + 1) := one_le_pow₀ (by norm_num)
+  obtain ⟨cand, hcand, hdist⟩ := exists_cand_near_of_resid hA Q hQ hsym hc φ hP
+    (ρ := 2 ^ (T + 1) * ℓ) (by positivity) hh
+    (fun v hv ↦ (resid_le_of_spectral hA Q hQ hsym hc φ hP R hR hℓ hφl v hv).trans
+      (pow_le_pow_left₀ (mul_nonneg (by linarith) hℓ) (by nlinarith) 2))
+    w hw1 (fun i hi ↦ (hw i hi).2) hN hB
+  exact ⟨cand, hcand, hdist.trans (le_of_eq (by ring))⟩
 
 /-! ### Graphs -/
 

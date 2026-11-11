@@ -1,8 +1,10 @@
 # Bansal–Khot from the Unique Games Conjecture
 
-`BHSV25.bansalKhot : UniqueGames.UGC → BHSV25.BansalKhot` ([../BansalKhot.lean](../BansalKhot.lean))
-is `BHSV25.BK.bansalKhot_of` applied to the analytic theorem `BHSV25.BK.itAintOver`, "It Ain't
-Over Till It's Over" [MOO10, Theorem 4.9]. Everything uses only `propext`, `Classical.choice` and
+`BHSV25.bansalKhot : UniqueGames.KhotUGC → BHSV25.BansalKhot`
+([../BansalKhot.lean](../BansalKhot.lean)) is `BHSV25.BK.bansalKhot_of` applied to the hardness of
+left-regular instances, `BHSV25.BK.LRHard`, which `../UG/` derives from the conjecture
+(`BHSV25.UG.lrHard_of_khotUGC`, see below), and to the analytic theorem `BHSV25.BK.itAintOver`,
+"It Ain't Over Till It's Over" [MOO10, Theorem 4.9]. Everything uses only `propext`, `Classical.choice` and
 `Quot.sound`.
 
 | File | Content |
@@ -20,6 +22,7 @@ Over Till It's Over" [MOO10, Theorem 4.9]. Everything uses only `propext`, `Clas
 | `Sound.lean` | Soundness (`Prm.sound`), folded long codes. |
 | `Machine.lean` | Polynomial time (`Prm.reduce_polytime`). |
 | `Main.lean` | Parameters and assembly (`bansalKhot_of`). |
+| `../UG/*.lean` | From the conjecture on graphs to left-regular instances (Section 0). |
 
 The theorem: for small `ε, γ > 0` and every
 `η > 0`, the gap problem `bkGap ε γ η` (maximum degree `≤ η n`; yes: two disjoint independent sets
@@ -44,16 +47,40 @@ variant of their reduction; the only deviations are choices that make the formal
   `t`-th moment.
 * Free coordinates `{j : a_j = 0}` for uniform `a ∈ [M]^R` (density `1/M`), so all vertices have
   the same weight and the graph is unweighted with no replication.
-* Self-conflicting vertices (all coordinates free) are discarded in the soundness; simplicity of
-  the instance is used there.
+* Self-conflicting vertices (all coordinates free) are discarded in the soundness; that parallel
+  constraints agree is used there.
+* The instances are left-regular with agreeing parallel constraints, not simple and bi-regular:
+  right-regularity is never used, and parallel constraints with the same table are harmless.
+  These are the instances that the Unique Games Conjecture on graphs gives after the double cover
+  and a regularization (Section 0).
 * The left vertices are capped at the number of constraints, so the output has polynomial size
   on every input; `R = 0` (no yes-instances) is handled by a constant map.
+
+## 0. From the conjecture to left-regular instances (`../UG/`)
+
+`BHSV25.UG.lrHard_of_khotUGC : UniqueGames.KhotUGC → BHSV25.BK.LRHard`, for `ε ≤ 1/4`, from the
+conjecture at `ε / 4` and `ℓ = ⌈2/ε⌉`:
+
+* **Double cover** (`UG/Cover.lean`): a left and a right copy of every vertex, and for each
+  constraint `((u, v), π)` the constraints `((u, v), π)` and `((v, u), π⁻¹)`. It is valid with
+  agreeing parallel constraints on simple instances (`u ≠ v`). A labeling of the graph on both
+  sides satisfies the same fraction; for a labeling `(σ, τ)` of the cover, labeling each vertex
+  from `σ` or `τ` over all `2^n` choices satisfies each constraint for a quarter of the choices
+  per satisfied copy, so `val(cover) ≤ 2 val`.
+* **Regularization** (`UG/Regular.lean`, Khot and Regev [KR08, Lemmas 3.3 and 3.4] in one step):
+  one left vertex per constraint, a copy of its left vertex `x` of degree `d`, with each
+  constraint at `x` repeated `⌊A/d⌋` times and the first `A mod d` more times, `A = ℓ |cs|`. The
+  copies of `x` (there are `d`) carry its weight, each block is within `d` of `(A/d) F_x(a)`
+  satisfied constraints for the label `a`, and the errors sum to at most `|cs|² = |cs| A / ℓ`, so
+  the value moves by at most `1/ℓ`; soundness relabels every copy of `x` by a best label for `x`.
+* **Polynomial time** (`UG/Machine.lean`), and the assembly (`UG/Bridge.lean`): the gap
+  `(1 - ε/4, ε/4)` goes to `(1 - ε/4, ε/2)`, then into `(1 - ε, ε)` on left-regular instances.
 
 ## 1. The reduction (`BK/Graph.lean`)
 
 Input: a Unique Games instance `(m, n, R, cs)` (left vertices `u < m`, right `v < n`, constraints
-`((u, v), π)`, satisfied when `σ(u) = π(τ(v))`), assumed valid, simple, bi-regular with `R` labels
-(the promise of `UniqueGames.ugGap`). Parameters: `t` (queries), `M` (free coordinates have
+`((u, v), π)`, satisfied when `σ(u) = π(τ(v))`), assumed valid, left-regular, with parallel
+constraints agreeing and `R` labels (the promise `BHSV25.BK.Good` of `BHSV25.BK.lrGap`). Parameters: `t` (queries), `M` (free coordinates have
 density `1/M`), `k₀` (copies), `s` (clique size for degenerate inputs).
 
 * `L` = number of constraints at `u = 0` (= left degree), `nbrs u` = constraints at `u` (list).
@@ -90,8 +117,8 @@ Union bound: `Pr[not accepted] ≤ t ε_UG + 1/M`, and flipping `z_{σ(u)}` show
 Let `S` be independent with `|S| ≥ γ N` (in one copy).
 
 1. **Self-consistent vertices.** A vertex conflicts with itself only if two of its constraints
-   have the same right vertex; by simplicity they are the same constraint, so all coordinates are
-   free: `a = 0`. These are `N / M^R ≤ N / M ≤ γ N / 4` vertices; drop them: `S'`, `|S'| ≥ 3γN/4`.
+   have the same right vertex; parallel constraints agree, so their demands coincide, and all
+   coordinates are free: `a = 0`. These are `N / M^R ≤ N / M ≤ γ N / 4` vertices; drop them: `S'`, `|S'| ≥ 3γN/4`.
 2. **Folded long codes.** `f_v(w) = 1` if some demand of `S'` at `v` contains `w`; `0` if one
    contains `¬w`; `w_0` otherwise. Independence makes this well defined and folded, and every
    vertex of `S'` *accepts*: `f_{v_p}(π_p y) = 1` for all `p` and `y ∈ C_D(z)`.
@@ -125,10 +152,11 @@ The formal statement (`BHSV25/BK/AintOver.lean`): for `M ≥ 2`, `ζ > 0` there 
 
 `ε₀ = 1/8` (so `γ ≤ 1/2 - ε`). Given `ε, γ ∈ (0, ε₀]`, `η > 0`:
 `M = ⌈2/ε⌉ + ⌈4/γ⌉ + 2`; `(K, τ, t)` from `ItAintOver M (γ/8)`; `ε₁` from `few_bad K τ (γ/8)`;
-`ε_UG = min(ε₀^UGC, ε₁, ε / (2(t+1)))`; `R` from the UGC for `ε_UG`. If `R = 0` the yes-instances
-of `ugGap 0` are empty (no labeling, value `0`) and the reduction maps everything to the fixed
-no-instance. Otherwise the reduction above maps yes to yes (Section 2) and no to no (Section 3);
-`NPHard.trans` with the UGC's hardness gives `NPHard encGraph (bkGap ε γ η)`.
+`ε_UG = min(ε₀, ε₁, ε / (2(t+1)))`; `R` from `BHSV25.BK.LRHard` for `ε_UG`. If `R = 0` the
+yes-instances of `lrGap 0` are empty (no labeling, value `0`) and the reduction maps everything to
+the fixed no-instance. Otherwise the reduction above maps yes to yes (Section 2) and no to no
+(Section 3); `NPHard.trans` with the hardness of `lrGap R ε_UG` gives
+`NPHard encGraph (bkGap ε γ η)`.
 
 ## 6. Polynomial time (`BK/Machine.lean`)
 

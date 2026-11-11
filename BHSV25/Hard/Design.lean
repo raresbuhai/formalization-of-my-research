@@ -73,8 +73,42 @@ instance (c c' : D.Cell a) : Decidable (D.Tc a c c') := by unfold Tc; infer_inst
 /-- The correction between cells. -/
 def Wc (c c' : D.Cell a) : ℤ := if c.2 = c'.2 then D.W0 c.1 c'.1 else 0
 
-/-- The numbering of the cells. -/
-noncomputable def eqv : D.Cell a ≃ Fin (Fintype.card (D.Cell a)) := Fintype.equivFin _
+omit D in
+/-- The numbering of `Γ₀ = 𝔽₂ × 𝔽₂^a × 𝔽₂^a`: `(b, x, y) ↦ Y + 2^a X + 4^a b`, for the binary
+numbers `X, Y` with digits `x, y`. -/
+def gamEquiv : Gam0 a ≃ Fin (2 * (2 ^ a * 2 ^ a)) :=
+  (Equiv.prodCongr (Equiv.refl (Fin 2))
+    (Equiv.prodCongr (finFunctionFinEquiv : (Fin a → Fin 2) ≃ Fin (2 ^ a))
+      (finFunctionFinEquiv : (Fin a → Fin 2) ≃ Fin (2 ^ a)))).trans
+    ((Equiv.prodCongr (Equiv.refl (Fin 2)) finProdFinEquiv).trans finProdFinEquiv)
+
+omit D in
+/-- The numbering of `Γ₀^r`, in base `2 · 4^a`. -/
+def gamrEquiv (r : ℕ) : (Fin r → Gam0 a) ≃ Fin ((2 * (2 ^ a * 2 ^ a)) ^ r) :=
+  (Equiv.arrowCongr (Equiv.refl _) (gamEquiv a)).trans finFunctionFinEquiv
+
+theorem card_cell_eq :
+    (2 * (2 ^ a * 2 ^ a)) ^ D.r * Fintype.card D.Ty = Fintype.card (D.Cell a) := by
+  rw [Fintype.card_prod, Fintype.card_fun, card_gam0, Fintype.card_fin, mul_comm]
+  congr 2
+  rw [← mul_pow]
+  norm_num
+
+/-- The numbering of the cells: `(τ, s) ↦ τ + |types| · s`, for the numbers of the type `τ` and
+of `s ∈ Γ₀^r` (`BHSV25.Hard.Design.gamrEquiv`). -/
+noncomputable def eqv : D.Cell a ≃ Fin (Fintype.card (D.Cell a)) :=
+  (Equiv.prodComm _ _).trans ((Equiv.prodCongr (gamrEquiv a D.r) (Fintype.equivFin D.Ty)).trans
+    (finProdFinEquiv.trans (finCongr (D.card_cell_eq a))))
+
+/-- The type of the cell numbered `u`: its number is `u mod |types|`. -/
+theorem eqv_symm_fst (u : Fin (Fintype.card (D.Cell a))) :
+    ((Fintype.equivFin D.Ty ((D.eqv a).symm u).1 : ℕ)) = u % Fintype.card D.Ty := by
+  simp [eqv, finProdFinEquiv_symm_apply, Fin.modNat]
+
+/-- The point of `Γ₀^r` of the cell numbered `u`: its number is `⌊u / |types|⌋`. -/
+theorem eqv_symm_snd (u : Fin (Fintype.card (D.Cell a))) :
+    ((gamrEquiv a D.r ((D.eqv a).symm u).2 : ℕ)) = u / Fintype.card D.Ty := by
+  simp [eqv, finProdFinEquiv_symm_apply, Fin.divNat]
 
 theorem add_self_gam {r : ℕ} (s : Fin r → Gam0 a) : s + s = 0 := by
   funext l

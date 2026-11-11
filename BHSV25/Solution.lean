@@ -3,7 +3,7 @@ module
 public import BHSV25.Model
 public import BHSV25.Spectral.ThresholdRank
 public import BHSV25.Alg.VertexCover
-public import BHSV25.Alg.IndepSetFull
+public import BHSV25.Alg.IndepSetUnif
 public import BHSV25.Alg.ExpanderFull
 public import BHSV25.Alg.ColoringFull
 public import BHSV25.Alg.VertexCoverFull
@@ -11,6 +11,9 @@ public import BHSV25.Alg.ColoringOrFull
 public import BHSV25.Alg.Coloring
 public import BHSV25.Hard.Corollaries
 public import BHSV25.Hard.LowRank
+public import BHSV25.Hard.Unbalanced
+public import BHSV25.Planted.PartialThm
+public import BHSV25.Planted.FullThm
 
 /-!
 # Main results: proofs
@@ -19,47 +22,51 @@ Restates the theorems of `Challenge.lean` with the same names and statements, an
 the development in this folder. Don't import `Challenge` here: the names would clash.
 
 All the statements are proved: the algorithms in their full versions, with their errors and
-running times, the hardness results and Theorem 1.7.
+running times, the hardness results and Theorems 1.7 and 4.1.
 -/
 
 public section
 
 namespace BHSV25
 
-open Filter Topology Turing.MultiTapeTM UniqueGames
+open Filter Topology Turing.MultiTapeTM UniqueGames Cslib.Complexity
 
 /-! ### Independent sets and vertex covers -/
 
-/-- **Theorem 7.20** of [BHSV25]: for every `c > 0`, `λ ∈ (0, 1)`, `t` and `γ ∈ (0, 1/4)`, an
-algorithm running in time `poly(n) · (γ / (1 - λ))^{-O(t)}` that, on regular graphs with at most
-`t` eigenvalues at most `-λ` and an independent set of `(1/2 - γ) n` vertices, outputs an
-independent set of at least `(1/2 - γ - (4 + c) γ / (1 - λ)) n` vertices. -/
+/-- **Theorem 7.20** of [BHSV25]: for every `c > 0`, `λ ∈ (0, 1)` and `γ ∈ (0, 1/4)`, one
+algorithm that, on regular graphs with an independent set of `(1/2 - γ) n` vertices, outputs an
+independent set of at least `(1/2 - γ - (4 + c) γ / (1 - λ)) n` vertices, running in time
+`poly(n) · (1 - λ)^{-O(1)} · (γ / (1 - λ))^{-O(t)}` on regular graphs with at most `t` eigenvalues
+at most `-λ`, for every `t`. -/
 theorem independentSet_bottomRank :
-    ∃ C : ℕ, ∀ c : ℝ, 0 < c → ∃ D : ℕ, ∀ lam : ℝ, 0 < lam → lam < 1 → ∀ t : ℕ,
+    ∃ C : ℕ, ∀ c : ℝ, 0 < c → ∃ D : ℕ, ∀ lam : ℝ, 0 < lam → lam < 1 →
       ∀ γ : ℝ, 0 < γ → γ < 1 / 4 →
-        ∃ A : Graph → List Bool,
-          RunsInTime A encGraph Encoding.encBits
-            (((D : ℝ) * (1 + (1 - lam) / γ)) ^ (D * (t + 1))) C ∧
-          ∀ G : Graph, G.IsRegular → (Finset.univ.filter fun i ↦ G.eig i ≤ -lam).card ≤ t →
+        ∃ A : Graph → List Bool, ∃ K : Graph → ℝ,
+          RunsInTimeWith A encGraph Encoding.encBits K C ∧
+          ∀ G : Graph, G.IsRegular →
+            (∀ t : ℕ, (Finset.univ.filter fun i ↦ G.eig i ≤ -lam).card ≤ t →
+              K G ≤ ((D : ℝ) / (1 - lam)) ^ D * ((D : ℝ) * (1 + (1 - lam) / γ)) ^ (D * (t + 1))) ∧
             G.2.IsIndepSet (G.vertexSet (A G) : Set (Fin G.1)) ∧
             (G.HasIndepSet ((1 / 2 - γ) * G.1) →
               (1 / 2 - γ - (4 + c) * γ / (1 - lam)) * G.1 ≤ (G.vertexSet (A G)).card) :=
   Alg.indepSet_bottomRank
 
 /-- **Theorem 1.1** of [BHSV25], full version (Corollary 7.21): for every `c > 0`,
-`λ ∈ (0, 1/2)`, `t` and `γ ∈ (0, 1/4)`, an algorithm running in time
-`poly(n) · (γ / (1 - √(2λ)))^{-O(t/λ²)}` that, on regular graphs with at most `t` eigenvalues
-larger than `λ` (`λ`-one-sided expanders for `t = 1`) and an independent set of `(1/2 - γ) n`
-vertices, outputs an independent set of at least `(1/2 - γ - (4 + c) γ / (1 - √(2λ))) n`
-vertices. -/
+`λ ∈ (0, 1/2)` and `γ ∈ (0, 1/4)`, one algorithm that, on regular graphs with an independent set
+of `(1/2 - γ) n` vertices, outputs an independent set of at least
+`(1/2 - γ - (4 + c) γ / (1 - √(2λ))) n` vertices, running in time
+`poly(n) · (1 - √(2λ))^{-O(1)} · (γ / (1 - √(2λ)))^{-O(t/λ²)}` on regular graphs with at most `t`
+eigenvalues larger than `λ` (`λ`-one-sided expanders for `t = 1`), for every `t`. -/
 theorem independentSet_approximation :
-    ∃ C : ℕ, ∀ c : ℝ, 0 < c → ∃ D : ℕ, ∀ lam : ℝ, 0 < lam → lam < 1 / 2 → ∀ t : ℕ,
+    ∃ C : ℕ, ∀ c : ℝ, 0 < c → ∃ D : ℕ, ∀ lam : ℝ, 0 < lam → lam < 1 / 2 →
       ∀ γ : ℝ, 0 < γ → γ < 1 / 4 →
-        ∃ A : Graph → List Bool,
-          RunsInTime A encGraph Encoding.encBits
-            (((D : ℝ) * (1 + (1 - Real.sqrt (2 * lam)) / γ)) ^
-              (D * (⌈(t : ℝ) / lam ^ 2⌉₊ + 1))) C ∧
-          ∀ G : Graph, G.IsRegular → G.numEigGT lam ≤ t →
+        ∃ A : Graph → List Bool, ∃ K : Graph → ℝ,
+          RunsInTimeWith A encGraph Encoding.encBits K C ∧
+          ∀ G : Graph, G.IsRegular →
+            (∀ t : ℕ, G.numEigGT lam ≤ t →
+              K G ≤ ((D : ℝ) / (1 - Real.sqrt (2 * lam))) ^ D *
+                ((D : ℝ) * (1 + (1 - Real.sqrt (2 * lam)) / γ)) ^
+                  (D * (⌈(t : ℝ) / lam ^ 2⌉₊ + 1))) ∧
             G.2.IsIndepSet (G.vertexSet (A G) : Set (Fin G.1)) ∧
             (G.HasIndepSet ((1 / 2 - γ) * G.1) →
               (1 / 2 - γ - (4 + c) * γ / (1 - Real.sqrt (2 * lam))) * G.1 ≤
@@ -109,53 +116,81 @@ theorem threeColoring_independentSet_or_coloring :
               (1 - f lam) * G.1 ≤ G.numColored 3 (A G)) :=
   Alg.threeColoring_independentSet_or_coloring
 
+/-! ### Random planting -/
+
+open Classical in
+/-- **Theorem 7.12** of [BHSV25] (random planting, partial recovery), with an additional error `ε`:
+for `k ≥ 3` and every `ε > 0`, one algorithm that, on the graph obtained by randomly planting a
+`k`-coloring in a `d`-regular graph with at most `t` eigenvalues at least `λ₀`, for every `t`,
+with probability at least `1 - O_k(1/n)` runs in time `n^{O(1)} · (O_{k,ε}(1))^t` and outputs a
+`(k, O_k(1/(d + 1)^γ) + ε)`-coloring. The paper's theorem has the error `O_k(1/d^{Ω(1)})`, without
+`ε`, in time `n^{O(1)} · (O_k(1))^t`; see the module doc. -/
+theorem plantedColoring_partial :
+    ∃ C : ℕ, ∃ γ : ℝ, 0 < γ ∧ ∀ k : ℕ, 3 ≤ k → ∃ lam₀ B P : ℝ, 0 < lam₀ ∧
+      ∀ ε : ℝ, 0 < ε → ∃ D : ℕ, ∃ A : Graph → List ℕ, ∃ K : Graph → ℝ,
+        RunsInTimeWith A encGraph encColoring K C ∧
+        ∀ (H : Graph) (d : ℕ), H.2.IsRegularOfDegree d → ∀ t : ℕ,
+          (Finset.univ.filter fun i ↦ lam₀ ≤ H.eig i).card ≤ t →
+          1 - P / H.1 ≤ H.plantProb k fun G ↦ K G ≤ (D : ℝ) ^ (t + 1) ∧
+            G.IsColoring k (B / ((d : ℝ) + 1) ^ γ + ε) (A G) :=
+  Planted.plantedColoring_partial
+
+open Classical in
+/-- **Theorem 7.17** of [BHSV25] (random planting, full recovery): for `k ≥ 3`, an algorithm
+running in time `n^{O(1)} · O_k(1)` that, on the graph obtained by randomly planting a
+`k`-coloring in a `d`-regular `λ₀`-one-sided expander with `d ≥ d₀`, outputs with probability at
+least `1 - O_k(1/n)` a proper `k`-coloring. -/
+theorem plantedColoring_full :
+    ∃ C : ℕ, ∀ k : ℕ, 3 ≤ k → ∃ lam₀ P : ℝ, 0 < lam₀ ∧ ∃ d₀ : ℕ, ∃ K : ℝ,
+      ∃ A : Graph → List ℕ, RunsInTime A encGraph encColoring K C ∧
+        ∀ (H : Graph) (d : ℕ), H.2.IsRegularOfDegree d → d₀ ≤ d →
+          H.IsOneSidedExpander lam₀ →
+          1 - P / H.1 ≤ H.plantProb k fun G ↦ G.IsColoring k 0 (A G) :=
+  Planted.plantedColoring_full
+
 /-! ### Hardness for almost 3-colorable graphs -/
 
-/-- **Theorem 1.5** of [BHSV25] (Corollary 8.4): assuming the Unique Games
-Conjecture, for all `ε, γ, λ > 0`, no polynomial-time algorithm finds `3` independent sets
-covering `(1/2 + γ) n` vertices in every regular `λ`-one-sided expander with `3` independent sets
-covering `(1 - ε) n` vertices, unless `NP ⊆ P`. -/
-theorem threeColoring_unbalanced_hardness (hUGC : UGC) :
-    ∀ ε γ lam : ℝ, 0 < ε → 0 < γ → 0 < lam →
-      ∀ A : Graph → List ℕ, ComputableInPolyTime A encGraph encColoring →
-        (∀ G : Graph, G.IsRegular → G.IsOneSidedExpander lam → G.HasColoring 3 ε →
-          G.IsColoring 3 (1 / 2 - γ) (A G)) →
-        NPSubsetP :=
+/-- **Theorem 1.5** of [BHSV25] (Corollary 8.4): assuming the Unique Games Conjecture, for all
+`ε > 0` and `γ ∈ (0, 1/2)` there is `f` with `f n → 0` such that it is NP-hard to find `3`
+independent sets covering `(1/2 + γ) n` vertices in a regular graph on `n` vertices with second
+eigenvalue at most `f n` and `3` independent sets covering `(1 - ε) n` vertices. -/
+theorem threeColoring_unbalanced_hardness (hUGC : KhotUGC) :
+    ∀ ε γ : ℝ, 0 < ε → 0 < γ → γ < 1 / 2 →
+      ∃ f : ℕ → ℝ, Tendsto f atTop (𝓝 0) ∧
+        PromiseProblem.NPHard encGraph (coloringGap (fun G ↦ G.IsRegular ∧
+          G.IsOneSidedExpander (f G.1) ∧ G.HasColoring 3 ε) 3 (1 / 2 - γ)) :=
   Hard.threeColoring_unbalanced_hardness hUGC
 
-/-- **Theorem 1.6** of [BHSV25] (Theorem 8.6): assuming the Unique Games
-Conjecture, for every `ε > 0` there is `R` such that for every `γ > 0` no polynomial-time
-algorithm finds `3` independent sets covering `(7/9 + γ) n` vertices in every regular graph with
-`3` disjoint independent sets of `(1/3 - ε) n` vertices each, at most two eigenvalues larger than
-`ε` and at most `R` eigenvalues larger than `ε` in absolute value, unless `NP ⊆ P`. -/
-theorem threeColoring_lowRank_hardness (hUGC : UGC) :
-    ∀ ε : ℝ, 0 < ε → ∃ R : ℕ, ∀ γ : ℝ, 0 < γ →
-      ∀ A : Graph → List ℕ, ComputableInPolyTime A encGraph encColoring →
-        (∀ G : Graph, G.IsRegular →
-          (∃ c, G.IsPartialColoring 3 c ∧ ∀ a < 3, (1 / 3 - ε) * G.1 ≤ G.classSize 3 c a) →
-          G.numEigGT ε ≤ 2 →
-          (Finset.univ.filter fun i ↦ ε < |G.eig i|).card ≤ R →
-          G.IsColoring 3 (2 / 9 - γ) (A G)) →
-        NPSubsetP :=
+/-- **Theorem 1.6** of [BHSV25] (Theorem 8.6): assuming the Unique Games Conjecture, for every
+`ε > 0` there is `R` such that for every `γ ∈ (0, 2/9)` there is `f` with `f n → 0` such that it is
+NP-hard to find `3` independent sets covering `(7/9 + γ) n` vertices in a regular graph on `n`
+vertices with `3` independent sets of the same size covering `(1 - ε) n` vertices, third
+eigenvalue at most `f n` and at most `R` eigenvalues larger than `f n` in absolute value. -/
+theorem threeColoring_lowRank_hardness (hUGC : KhotUGC) :
+    ∀ ε : ℝ, 0 < ε → ∃ R : ℕ, ∀ γ : ℝ, 0 < γ → γ < 2 / 9 →
+      ∃ f : ℕ → ℝ, Tendsto f atTop (𝓝 0) ∧
+        PromiseProblem.NPHard encGraph (coloringGap (fun G ↦ G.IsRegular ∧
+          (∃ c, G.IsColoring 3 ε c ∧ ∀ a < 3, G.classSize 3 c a = G.classSize 3 c 0) ∧
+          G.numEigGT (f G.1) ≤ 2 ∧ (Finset.univ.filter fun i ↦ f G.1 < |G.eig i|).card ≤ R) 3
+            (2 / 9 - γ)) :=
   Hard.threeColoring_lowRank_hardness hUGC
 
 /-! ### Threshold ranks -/
 
-/-- **Theorem 4.1** of [BHSV25], in the parameters of Theorem 1.7: for a symmetric matrix with
-nonnegative entries and eigenvalues in `[-1, 1]`, and all `τ > 0` and `τ' < τ²`,
-`((τ² - τ') / (1 - τ'))² · #{eigenvalues ≤ -τ} ≤ #{eigenvalues ≥ τ'}`. -/
+/-- **Theorem 4.1** of [BHSV25]: for a symmetric matrix with nonnegative entries and eigenvalues
+in `[-1, 1]`, `λ ≥ 0` and `σ ∈ (0, 1)`,
+`σ² · #{eigenvalues ≤ -λ} ≤ #{eigenvalues ≥ (λ² - σ) / (1 - σ)}`. -/
 theorem thresholdRank {ι : Type} [Fintype ι] [DecidableEq ι] (A : Matrix ι ι ℝ)
     (hA : A.IsHermitian) (hnonneg : ∀ i j, 0 ≤ A i j) (hnorm : ∀ i, |hA.eigenvalues i| ≤ 1)
-    (τ τ' : ℝ) (hτ : 0 < τ) (hτ' : τ' < τ ^ 2) :
-    ((τ ^ 2 - τ') / (1 - τ')) ^ 2 *
-        ((Finset.univ.filter fun i ↦ hA.eigenvalues i ≤ -τ).card : ℝ) ≤
-      (Finset.univ.filter fun i ↦ τ' ≤ hA.eigenvalues i).card :=
-  Spectral.thresholdRank A hA hnonneg hnorm τ τ' hτ hτ'
+    (lam σ : ℝ) (hlam : 0 ≤ lam) (hσ0 : 0 < σ) (hσ1 : σ < 1) :
+    σ ^ 2 * ((Finset.univ.filter fun i ↦ hA.eigenvalues i ≤ -lam).card : ℝ) ≤
+      (Finset.univ.filter fun i ↦ (lam ^ 2 - σ) / (1 - σ) ≤ hA.eigenvalues i).card :=
+  Spectral.thresholdRank_sigma A hA hnonneg hnorm lam σ hlam hσ0 hσ1
 
-/-- **Theorem 1.7** of [BHSV25]: for every graph and all `τ > 0` and `τ' < τ²`, the spectrum `σ(G)`
+/-- **Theorem 1.7** of [BHSV25]: for every graph and all `τ ≥ 0` and `τ' < τ²`, the spectrum `σ(G)`
 of its normalized adjacency matrix satisfies
 `((τ² - τ') / (1 - τ'))² · |σ(G) ∩ (-∞, -τ]| ≤ |σ(G) ∩ [τ', ∞)|`. -/
-theorem thresholdRank_graph (G : Graph) (τ τ' : ℝ) (hτ : 0 < τ) (hτ' : τ' < τ ^ 2) :
+theorem thresholdRank_graph (G : Graph) (τ τ' : ℝ) (hτ : 0 ≤ τ) (hτ' : τ' < τ ^ 2) :
     ((τ ^ 2 - τ') / (1 - τ')) ^ 2 * ((Finset.univ.filter fun i ↦ G.eig i ≤ -τ).card : ℝ) ≤
       (Finset.univ.filter fun i ↦ τ' ≤ G.eig i).card :=
   Spectral.thresholdRank_graph G τ τ' hτ hτ'
@@ -174,17 +209,14 @@ theorem expanderColoring_distinctRows :
             G.IsColoring k (B * (Real.sqrt δ + lam + δ / lam)) (A G) :=
   Alg.expanderColoring_distinctRows
 
-/-- **Theorem 1.8 (2)** of [BHSV25] (Corollary 8.3): assuming the Unique Games
-Conjecture, for every model `M` with repeated rows there is `δ > 0` such that, for all
-`ε, λ > 0`, no polynomial-time algorithm finds a `(k, δ)`-coloring of every regular `λ`-one-sided
-expander with an `(M, ε)`-coloring, unless `NP ⊆ P`. -/
-theorem expanderColoring_repeatedRows_hardness (hUGC : UGC) {k : ℕ}
+/-- **Theorem 1.8 (2)** of [BHSV25] (Corollary 8.3): assuming the Unique Games Conjecture, for
+every model `M` with repeated rows there is `δ > 0` such that, for all `ε, λ > 0`, it is NP-hard to
+find a `(k, δ)`-coloring of a regular `λ`-one-sided expander with an `(M, ε)`-coloring. -/
+theorem expanderColoring_repeatedRows_hardness (hUGC : KhotUGC) {k : ℕ}
     (M : Matrix (Fin k) (Fin k) ℝ) (hM : IsModel M) (hrows : ¬ Function.Injective M) :
     ∃ δ : ℝ, 0 < δ ∧ ∀ ε lam : ℝ, 0 < ε → 0 < lam →
-      ∀ A : Graph → List ℕ, ComputableInPolyTime A encGraph encColoring →
-        (∀ G : Graph, G.IsRegular → G.IsOneSidedExpander lam → G.MColorable M ε →
-          G.IsColoring k δ (A G)) →
-        NPSubsetP :=
+      PromiseProblem.NPHard encGraph (coloringGap (fun G ↦ G.IsRegular ∧
+        G.IsOneSidedExpander lam ∧ G.MColorable M ε) k δ) :=
   Hard.expanderColoring_repeatedRows_hardness hUGC M hM hrows
 
 /-- **Theorem 1.9 (1)** of [BHSV25], full version (Theorem 7.1): for every model `M` with
@@ -202,17 +234,14 @@ theorem expanderColoring_algorithm :
               (alpha M π + B * (Real.sqrt δ + lam + δ / lam)) (A G) :=
   Alg.expanderColoring_algorithm
 
-/-- **Theorem 1.9 (2)** of [BHSV25] (Theorem 8.2): assuming the Unique Games
-Conjecture, for every model `M` with stationary distribution `π` and all `γ, ε, λ > 0`, no
-polynomial-time algorithm finds a `(k, α - γ)`-coloring of every regular `λ`-one-sided expander
-with an `(M, ε)`-coloring, unless `NP ⊆ P`. -/
-theorem expanderColoring_hardness (hUGC : UGC) {k : ℕ} (M : Matrix (Fin k) (Fin k) ℝ)
+/-- **Theorem 1.9 (2)** of [BHSV25] (Theorem 8.2): assuming the Unique Games Conjecture, for
+every model `M` with stationary distribution `π`, all `ε, λ > 0` and `γ ∈ (0, α)`, it is NP-hard to
+find a `(k, α - γ)`-coloring of a regular `λ`-one-sided expander with an `(M, ε)`-coloring. -/
+theorem expanderColoring_hardness (hUGC : KhotUGC) {k : ℕ} (M : Matrix (Fin k) (Fin k) ℝ)
     (hM : IsModel M) (π : Fin k → ℝ) (hπ : IsStationary M π) :
-    ∀ γ ε lam : ℝ, 0 < γ → 0 < ε → 0 < lam →
-      ∀ A : Graph → List ℕ, ComputableInPolyTime A encGraph encColoring →
-        (∀ G : Graph, G.IsRegular → G.IsOneSidedExpander lam → G.MColorable M ε →
-          G.IsColoring k (alpha M π - γ) (A G)) →
-        NPSubsetP :=
+    ∀ γ ε lam : ℝ, 0 < γ → γ < alpha M π → 0 < ε → 0 < lam →
+      PromiseProblem.NPHard encGraph (coloringGap (fun G ↦ G.IsRegular ∧
+        G.IsOneSidedExpander lam ∧ G.MColorable M ε) k (alpha M π - γ)) :=
   Hard.expanderColoring_hardness hUGC M hM π hπ
 
 end BHSV25

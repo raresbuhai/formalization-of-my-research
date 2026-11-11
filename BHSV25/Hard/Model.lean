@@ -34,20 +34,14 @@ The parameters `m` (absorbers), `H` (color units), `D` (weights), `a` (pseudo-ra
 
 namespace BHSV25.Hard
 
-open Finset Turing.MultiTapeTM
+open Finset Turing.MultiTapeTM Cslib.Complexity
 
-/-- **Theorem 1.9 (2)** of [BHSV25] (Theorem 8.2): assuming the Unique Games Conjecture, for
-every model `M` with stationary distribution `π` and all `γ, ε, λ > 0`, no polynomial-time
-algorithm finds a `(k, α - γ)`-coloring of every regular `λ`-one-sided expander with an
-`(M, ε)`-coloring, unless `NP ⊆ P`. -/
-theorem expanderColoring_hardness (hUGC : UniqueGames.UGC) {k : ℕ}
-    (M : Matrix (Fin k) (Fin k) ℝ) (hM : IsModel M) (π : Fin k → ℝ) (hπ : IsStationary M π) :
-    ∀ γ ε lam : ℝ, 0 < γ → 0 < ε → 0 < lam →
-      ∀ A : Graph → List ℕ, ComputableInPolyTime A encGraph encColoring →
-        (∀ G : Graph, G.IsRegular → G.IsOneSidedExpander lam → G.MColorable M ε →
-          G.IsColoring k (alpha M π - γ) (A G)) →
-        NPSubsetP := by
-  intro γ ε lam hγ hε hlam A hA hsolve
+/-- Theorem 8.2 for `ε ≤ α - γ`, where an `(M, ε)`-coloring is a `(k, α - γ)`-coloring. -/
+theorem expanderColoring_hardness_le (hUGC : UniqueGames.KhotUGC) {k : ℕ}
+    (M : Matrix (Fin k) (Fin k) ℝ) (hM : IsModel M) (π : Fin k → ℝ) (hπ : IsStationary M π)
+    {γ ε lam : ℝ} (hγ : 0 < γ) (hε : 0 < ε) (hεγ : ε ≤ alpha M π - γ) (hlam : 0 < lam) :
+    PromiseProblem.NPHard encGraph (coloringGap (fun G ↦ G.IsRegular ∧
+      G.IsOneSidedExpander lam ∧ G.MColorable M ε) k (alpha M π - γ)) := by
   have hk : 0 < k := by
     rcases Nat.eq_zero_or_pos k with h | h
     · have h1 := hπ.2.1
@@ -151,70 +145,62 @@ theorem expanderColoring_hardness (hUGC : UniqueGames.UGC) {k : ℕ}
   have hξ0 : 0 ≤ X.ξ a η := by unfold ModelRed.Data.ξ; positivity
   have hδ : X.δ₀ pm ≤ ε / 4 ∧ X.δ₀ pm ≤ lam / 2 := ⟨hDδε, hDδl⟩
   have hNP := hBK εB γB η hεB0 (min_le_left _ _) hγB0 (min_le_left _ _) hη0
-  have hα1 := X.alpha_le_one
-  refine npSubsetP_of_reduction hNP (X.design.template a).blowup
-    (X.design.template a).blowup_polytime A hA k (q₀ := 1 - alpha M π + 3 * γ / 4)
-    (q₁ := 1 - alpha M π + γ) (by change 0 ≤ 1 - alpha X.M X.π + 3 * γ / 4; linarith)
-    (by linarith) ?_ ?_
+  refine npHard_of_reduction hεB0.le hγB0 hη0.le hNP (X.design.template a).blowup
+    (X.design.template a).blowup_polytime (fun G hG hn ↦ ?_) fun G hG ↦ ?_
   · -- yes-instances
-    intro G hG
     obtain ⟨hdeg, I, J, hIJ, hI, hJ, hIc, hJc⟩ := hG
-    rcases Nat.eq_zero_or_pos G.1 with h0 | hn
-    · have hN : (X.design.blow a G).1 = 0 := by
-        change Fintype.card (X.design.Cell a) * G.1 = 0
-        rw [h0, mul_zero]
-      refine ⟨fun u ↦ ?_, ?_⟩
-      · have hu : (u : ℕ) < (X.design.blow a G).1 := u.2
-        omega
-      change (1 - alpha M π + γ) * ((X.design.blow a G).1 : ℝ) ≤ _
-      rw [hN, Nat.cast_zero, mul_zero]
-      exact Nat.cast_nonneg _
-    · have hcov : 1 / ((m : ℝ) + 1) + 2 * εB ≤ ε := by linarith
-      have hmod : X.ξ a η * (1 + 2 * H * D) + X.δ₀ pm +
-          ((k : ℝ) ^ 2 / D + k / (2 * H)) / pm ≤ ε := by
-        have h1 : X.ξ a η * (1 + 2 * H * D) ≤ ε / 4 := by
-          have hTe : T ≤ ε / 8 / (1 + 2 * H * D) := min_le_left _ _
-          have hpos : (0 : ℝ) < 1 + 2 * H * D := by positivity
-          calc X.ξ a η * (1 + 2 * H * D) ≤ 2 * T * (1 + 2 * H * D) :=
-                mul_le_mul_of_nonneg_right hξ hpos.le
-            _ ≤ 2 * (ε / 8 / (1 + 2 * H * D)) * (1 + 2 * H * D) := by gcongr
-            _ = ε / 4 := by field_simp; ring
-        have h2 : ((k : ℝ) ^ 2 / D + k / (2 * H)) / pm ≤ ε / 4 := by
-          rw [div_le_iff₀ hpm]
-          linarith
-        linarith [hδ.1]
-      have hl : X.ξ a η + X.δ₀ pm ≤ lam := by
-        have : T ≤ lam / 4 := min_le_right _ _
-        linarith [hδ.2]
-      obtain ⟨hreg, hexp, hcol⟩ := X.yes a G hn hη0.le hpm hπpm hHpm hdeg hIJ hI hJ hIc hJc hcov
-        hmod hl
-      have hout := hsolve (X.design.blow a G) hreg hexp hcol
-      refine ⟨hout.1, ?_⟩
-      have h2 := hout.2
-      rw [show 1 - (alpha M π - γ) = 1 - alpha M π + γ by ring] at h2
-      exact h2
+    have hcov : 1 / ((m : ℝ) + 1) + 2 * εB ≤ ε := by linarith
+    have hmod : X.ξ a η * (1 + 2 * H * D) + X.δ₀ pm +
+        ((k : ℝ) ^ 2 / D + k / (2 * H)) / pm ≤ ε := by
+      have h1 : X.ξ a η * (1 + 2 * H * D) ≤ ε / 4 := by
+        have hTe : T ≤ ε / 8 / (1 + 2 * H * D) := min_le_left _ _
+        have hpos : (0 : ℝ) < 1 + 2 * H * D := by positivity
+        calc X.ξ a η * (1 + 2 * H * D) ≤ 2 * T * (1 + 2 * H * D) :=
+              mul_le_mul_of_nonneg_right hξ hpos.le
+          _ ≤ 2 * (ε / 8 / (1 + 2 * H * D)) * (1 + 2 * H * D) := by gcongr
+          _ = ε / 4 := by field_simp; ring
+      have h2 : ((k : ℝ) ^ 2 / D + k / (2 * H)) / pm ≤ ε / 4 := by
+        rw [div_le_iff₀ hpm]
+        linarith
+      linarith [hδ.1]
+    have hl : X.ξ a η + X.δ₀ pm ≤ lam := by
+      have : T ≤ lam / 4 := min_le_right _ _
+      linarith [hδ.2]
+    obtain ⟨hreg, hexp, hcol⟩ := X.yes a G hn hη0.le hpm hπpm hHpm hdeg hIJ hI hJ hIc hJc hcov
+      hmod hl
+    exact ⟨⟨hreg, hexp, hcol⟩, hasColoring_mono (hasColoring_of_mColorable _ hcol) hεγ⟩
   · -- no-instances
-    intro G hG
+    have hn := pos_of_mem_no hγB0 hG
     obtain ⟨-, -, hno⟩ := hG
-    have hn : 0 < G.1 := by
-      have h0 := hno ∅ (by simp)
-      simp only [card_empty, Nat.cast_zero] at h0
-      exact_mod_cast pos_of_mul_pos_right h0 hγB0.le
-    refine ⟨?_, fun c hc ↦ ?_⟩
-    · have hC : 0 < Fintype.card (X.design.Cell a) := by
-        have : (0 : ℝ) < Fintype.card (X.design.Cell a) := by
-          rw [X.card_cells a]
-          have : (1 : ℝ) ≤ ∑ i, (X.s i : ℝ) :=
-            le_trans (by exact_mod_cast X.one_le_s ⟨0, hk⟩)
-              (single_le_sum (f := fun i ↦ (X.s i : ℝ)) (fun i _ ↦ Nat.cast_nonneg _)
-                (mem_univ _))
-          have := X.one_le_cnt
-          positivity
-        exact_mod_cast this
-      exact Nat.mul_pos hC hn
-    · have h := X.no a G hγB0.le hno c hc
-      refine h.trans (mul_le_mul_of_nonneg_right ?_ (Nat.cast_nonneg _))
-      change 1 - alpha M π + 2 * (k : ℝ) ^ 2 / D + k / H + k * γB ≤ 1 - alpha M π + 3 * γ / 4
-      linarith
+    have hC : 0 < Fintype.card (X.design.Cell a) := by
+      have : (0 : ℝ) < Fintype.card (X.design.Cell a) := by
+        rw [X.card_cells a]
+        have : (1 : ℝ) ≤ ∑ i, (X.s i : ℝ) :=
+          le_trans (by exact_mod_cast X.one_le_s ⟨0, hk⟩)
+            (single_le_sum (f := fun i ↦ (X.s i : ℝ)) (fun i _ ↦ Nat.cast_nonneg _)
+              (mem_univ _))
+        have := X.one_le_cnt
+        positivity
+      exact_mod_cast this
+    refine not_hasColoring_of_le (Nat.mul_pos hC hn) (q := 1 - alpha M π + 3 * γ / 4)
+      (by linarith) fun c hc ↦ ?_
+    have h := X.no a G hγB0.le hno c hc
+    refine h.trans (mul_le_mul_of_nonneg_right ?_ (Nat.cast_nonneg _))
+    change 1 - alpha M π + 2 * (k : ℝ) ^ 2 / D + k / H + k * γB ≤ 1 - alpha M π + 3 * γ / 4
+    linarith
+
+/-- **Theorem 1.9 (2)** of [BHSV25] (Theorem 8.2): assuming the Unique Games Conjecture, for
+every model `M` with stationary distribution `π`, all `ε, λ > 0` and `γ ∈ (0, α)`, it is NP-hard
+to find a `(k, α - γ)`-coloring of a regular `λ`-one-sided expander with an `(M, ε)`-coloring. -/
+theorem expanderColoring_hardness (hUGC : UniqueGames.KhotUGC) {k : ℕ}
+    (M : Matrix (Fin k) (Fin k) ℝ) (hM : IsModel M) (π : Fin k → ℝ) (hπ : IsStationary M π) :
+    ∀ γ ε lam : ℝ, 0 < γ → γ < alpha M π → 0 < ε → 0 < lam →
+      PromiseProblem.NPHard encGraph (coloringGap (fun G ↦ G.IsRegular ∧
+        G.IsOneSidedExpander lam ∧ G.MColorable M ε) k (alpha M π - γ)) := by
+  intro γ ε lam hγ hγα hε hlam
+  have h := expanderColoring_hardness_le hUGC M hM π hπ (ε := min ε (alpha M π - γ)) hγ
+    (lt_min hε (by linarith)) (min_le_right _ _) hlam
+  exact h.mono (fun G hG ↦ ⟨⟨hG.1.1, hG.1.2.1, mColorable_mono hG.1.2.2 (min_le_left _ _)⟩, hG.2⟩)
+    fun _ h ↦ h
 
 end BHSV25.Hard

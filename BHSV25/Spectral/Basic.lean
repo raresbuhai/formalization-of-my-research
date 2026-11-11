@@ -150,7 +150,7 @@ theorem card_eig_le_neg_le {τ σ : ℝ} (hτ0 : 0 ≤ τ) (hτ1 : τ < 1) (hσ0
   have hσ : (Real.sqrt (τ * (1 - σ) + σ) ^ 2 - τ) / (1 - τ) = σ := by
     rw [hsq, div_eq_iff (sub_pos.2 hτ1).ne']
     ring
-  have h := Spectral.thresholdRank_graph G _ τ (Real.sqrt_pos.2 hpos) hlt
+  have h := Spectral.thresholdRank_graph G _ τ (Real.sqrt_pos.2 hpos).le hlt
   rwa [hσ] at h
 
 end Graph

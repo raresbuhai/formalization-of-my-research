@@ -2,6 +2,7 @@ module
 
 public import BHSV25.Model
 public import BHSV25.BK.Main
+public import BHSV25.UG.Bridge
 
 /-!
 # The hardness of almost-bipartite independent set
@@ -13,9 +14,11 @@ independent set of `γ n` vertices; Bafna, Hsieh and Kothari note that the graph
 degree `o(n)`.
 
 This file states it as `BHSV25.BansalKhot`, for graphs of maximum degree at most `η n` for every
-`η > 0`, and proves it from the Unique Games Conjecture (`BHSV25.bansalKhot`, from the reduction
-of `BHSV25/BK/`, which `BHSV25/BK/README.md` describes). The hardness theorems of `Challenge.lean`
-assume the conjecture itself, and their proofs go through this statement.
+`η > 0`, and proves it from the Unique Games Conjecture on graphs (`UniqueGames.KhotUGC`;
+`BHSV25.bansalKhot`): the double cover and a regularization (`BHSV25/UG/`) give hardness on
+left-regular bipartite instances whose parallel constraints agree, from which the reduction of
+`BHSV25/BK/` starts (`BHSV25/BK/README.md` describes it). The hardness theorems of
+`Challenge.lean` assume the conjecture itself, and their proofs go through this statement.
 
 References:
 * N. Bansal, S. Khot, *Optimal long code test with one free bit*, FOCS 2009.
@@ -56,7 +59,7 @@ def BansalKhot : Prop :=
     PromiseProblem.NPHard encGraph (bkGap ε γ η)
 
 /-- **Bansal and Khot's theorem**: the Unique Games Conjecture implies [BHSV25, Fact 8.1]. -/
-theorem bansalKhot (hUGC : UniqueGames.UGC) : BansalKhot :=
-  BK.bansalKhot_of hUGC BK.itAintOver
+theorem bansalKhot (hUGC : UniqueGames.KhotUGC) : BansalKhot :=
+  BK.bansalKhot_of (UG.lrHard_of_khotUGC hUGC) BK.itAintOver
 
 end BHSV25

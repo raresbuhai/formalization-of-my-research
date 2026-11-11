@@ -23,6 +23,8 @@ The degree `C` is that of the polynomial bounding `U`, so it does not depend on 
 factor `c (|p| + 1)^C` is explicit in the length of the encoded parameter. A parameter that
 carries a unary padding of length `F` therefore gives the factor `O(F^C)`: this is how an
 algorithm doing `F · poly(n)` work (a net of size `F` over the graph) gets its running time.
+When `F` depends on the input, the padding is computed from it instead
+(`BHSV25/TimePad.lean`).
 
 The fixed machine writes the framed parameter in front of its input and then runs `U`, with
 complexitylib's tidy combinators for constant outputs, the identity, concatenation and
@@ -30,7 +32,6 @@ composition, whose time bounds are explicit.
 
 * `BHSV25.runsInTime_fix`: fixing the parameter of a polynomial-time machine;
   `BHSV25.runsInTime_graph_fix` for algorithms reading a graph as `(n, a)`.
-* `BHSV25.RunsInTime.mono`: larger factors and degrees.
 -/
 
 @[expose] public section
@@ -172,18 +173,5 @@ theorem exists_runsInTime_graph_fix {P β : Type} {encP : P ↪ List Bool}
       RunsInTime (fun G : Graph ↦ V (p, (G.1, adjTable G))) encGraph encOut K C :=
   let ⟨_, C, h⟩ := runsInTime_graph_fix hV
   ⟨C, fun p ↦ ⟨_, h p⟩⟩
-
-/-- Running times are monotone in the factor and, for a nonnegative factor, in the degree. -/
-theorem RunsInTime.mono {α β : Type*} {A : α → β} {encIn : α ↪ List Bool}
-    {encOut : β ↪ List Bool} {K K' : ℝ} {C C' : ℕ} (h : RunsInTime A encIn encOut K C)
-    (hK : K ≤ K') (hK' : 0 ≤ K') (hC : C ≤ C') : RunsInTime A encIn encOut K' C' := by
-  obtain ⟨s, hs, h⟩ := h
-  refine ⟨s, hs, h.mono (fun a ↦ Nat.ceil_mono ?_) (fun _ ↦ le_rfl)⟩
-  have hm : (1 : ℝ) ≤ ((encIn a).length : ℝ) + 1 := by
-    linarith [Nat.cast_nonneg (α := ℝ) (encIn a).length]
-  calc K * (((encIn a).length : ℝ) + 1) ^ C ≤ K' * (((encIn a).length : ℝ) + 1) ^ C :=
-        mul_le_mul_of_nonneg_right hK (by positivity)
-    _ ≤ K' * (((encIn a).length : ℝ) + 1) ^ C' :=
-        mul_le_mul_of_nonneg_left (pow_le_pow_right₀ hm hC) hK'
 
 end BHSV25

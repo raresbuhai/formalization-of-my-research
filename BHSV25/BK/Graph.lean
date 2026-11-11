@@ -133,7 +133,7 @@ abbrev baseGraph (cs : List UGConstraint) (m L : ℕ) : Graph :=
 
 /-- **The reduction**: `k₀` copies of the graph of the instance, or of the clique `K_s` if there
 is no constraint at `u = 0`. (The number of left vertices is capped by the number of constraints,
-which it does not exceed on bi-regular instances with constraints, so that the output has
+which it does not exceed on left-regular instances with constraints, so that the output has
 polynomial size on every input.) -/
 def reduce (G : UGInstance) : Graph :=
   if ldeg G.2.2.2 = 0 then copies (clique P.s) P.k₀

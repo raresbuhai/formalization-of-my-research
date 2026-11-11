@@ -9,15 +9,20 @@ public import Complexity.Computability.Machines.Turing.MultiTape.Complexity.Poly
 public import Complexity.Computability.Machines.Turing.MultiTape.Complexity.PolyTime.BitString
 
 /-!
-# From a reduction and an algorithm to `NP ⊆ P`
+# From reductions to NP-hardness, and from NP-hardness to `NP ⊆ P`
 
-The common last step of the hardness theorems (`BHSV25.Hard.npSubsetP_of_reduction`): given a
-polynomial-time map `R` from graphs to graphs and a polynomial-time algorithm `A`, if `A` finds on
-`R G` a partial `k`-coloring coloring at least `q₁ |V(R G)|` vertices for every yes-instance `G`
-of the gap problem `bkGap ε γ η` of Bansal and Khot, while no partial `k`-coloring of `R G`
-colors more than `q₀ |V(R G)|` vertices for its no-instances, with `0 ≤ q₀ < q₁`, then checking
-the output of `A` on `R G` against a rational threshold between `q₀` and `q₁` solves the gap
-problem in polynomial time; if it is NP-hard, `NP ⊆ P`.
+* **The common last step of the hardness theorems** (`BHSV25.Hard.npHard_of_reduction`): a
+  polynomial-time map from graphs to graphs sending the yes-instances of the gap problem
+  `bkGap ε γ η` of Bansal and Khot to yes-instances of a promise problem `Y`, and its
+  no-instances to no-instances of `Y`, makes `Y` NP-hard. The graph without vertices, a
+  yes-instance of `bkGap ε γ η` that no blow-up maps to a graph with an `(M, ε)`-coloring, is
+  first replaced by two isolated vertices (`BHSV25.Hard.nonempty`).
+* **NP-hardness rules out algorithms** (`BHSV25.Hard.npSubsetP_of_npHard`): if the gap problem
+  `coloringGap P k δ` is NP-hard and a polynomial-time algorithm finds `(k, δ')`-colorings of the
+  graphs with property `P`, `δ' < δ ≤ 1`, then checking its output against a rational threshold
+  between `1 - δ` and `1 - δ'` solves the gap problem in polynomial time, so `NP ⊆ P`. This
+  check, for a polynomial-time map `R` and a gap of coverages `q₀ < q₁`, is
+  `BHSV25.Hard.npSubsetP_of_reduction`.
 
 The check (`BHSV25.Hard.checkL`) reads the number of vertices, the adjacency table and the
 coloring: every pair `p = u n + v` with `u ~ v` must have `u` uncolored or colored differently from
@@ -201,20 +206,159 @@ theorem checkU_polytime (k num den : ℕ) :
 
 end Machine
 
-/-! ### The glue -/
+/-! ### Colorings -/
+
+theorem isColoring_mono {G : Graph} {k : ℕ} {δ δ' : ℝ} {c : List ℕ} (h : G.IsColoring k δ c)
+    (hδ : δ ≤ δ') : G.IsColoring k δ' c :=
+  ⟨h.1, le_trans (mul_le_mul_of_nonneg_right (by linarith) (Nat.cast_nonneg _)) h.2⟩
+
+theorem hasColoring_mono {G : Graph} {k : ℕ} {δ δ' : ℝ} (h : G.HasColoring k δ) (hδ : δ ≤ δ') :
+    G.HasColoring k δ' :=
+  let ⟨c, hc⟩ := h
+  ⟨c, isColoring_mono hc hδ⟩
+
+theorem mColorable_mono {G : Graph} {k : ℕ} {M : Matrix (Fin k) (Fin k) ℝ} {δ δ' : ℝ}
+    (h : G.MColorable M δ) (hδ : δ ≤ δ') : G.MColorable M δ' := by
+  obtain ⟨χ, h1, S, hS, hmono⟩ := h
+  exact ⟨χ, fun a b ↦ (h1 a b).trans hδ, S,
+    hS.trans (mul_le_mul_of_nonneg_right hδ (Nat.cast_nonneg _)), hmono⟩
+
+/-- An `(M, ε)`-coloring gives a `(k, ε)`-coloring: uncolor the vertices covering the
+monochromatic edges. -/
+theorem hasColoring_of_mColorable {k : ℕ} {M : Matrix (Fin k) (Fin k) ℝ} {ε : ℝ} (G : Graph)
+    (h : G.MColorable M ε) : G.HasColoring k ε := by
+  classical
+  obtain ⟨χ, -, S, hS, hmono⟩ := h
+  set c : List ℕ := List.ofFn fun v : Fin G.1 ↦ if v ∈ S then k else (χ v : ℕ)
+  have hcol : ∀ v, G.color k c v = if v ∈ S then k else (χ v : ℕ) := by
+    intro v
+    unfold Graph.color
+    rw [List.getD_eq_getElem?_getD, List.getElem?_ofFn]
+    simp only [v.2, ↓reduceDIte, Option.getD_some, Fin.eta]
+  refine ⟨c, fun u v huv hu ↦ ?_, ?_⟩
+  · rw [hcol] at hu ⊢
+    rw [hcol]
+    have huS : u ∉ S := by intro h; rw [ite_eq_left h] at hu; exact lt_irrefl _ hu
+    rw [ite_eq_right huS]
+    by_cases hvS : v ∈ S
+    · rw [ite_eq_left hvS]; exact (χ u).2.ne
+    · rw [ite_eq_right hvS]
+      intro heq
+      rcases hmono u v huv (Fin.ext heq) with h | h
+      · exact huS h
+      · exact hvS h
+  · unfold Graph.numColored
+    have hsub : Sᶜ ⊆ univ.filter fun v ↦ G.color k c v < k := by
+      intro v hv
+      rw [mem_compl] at hv
+      simp only [mem_filter, mem_univ, true_and, hcol, ite_eq_right hv]
+      exact (χ v).2
+    have h1 := card_le_card hsub
+    rw [card_compl, Fintype.card_fin] at h1
+    have h2 : (S.card : ℝ) ≤ G.1 := by exact_mod_cast (card_le_univ S).trans (by simp)
+    have h3 : ((G.1 - S.card : ℕ) : ℝ) = G.1 - S.card := by
+      rw [Nat.cast_sub (by exact_mod_cast h2)]
+    have h4 : ((G.1 - S.card : ℕ) : ℝ) ≤ (univ.filter fun v ↦ G.color k c v < k).card := by
+      exact_mod_cast h1
+    linarith
+
+/-- No `(k, δ)`-coloring: every partial `k`-coloring colors at most `q n` vertices, `q < 1 - δ`,
+and there is a vertex. -/
+theorem not_hasColoring_of_le {H : Graph} {k : ℕ} {q δ : ℝ} (hn : 0 < H.1) (hq : q < 1 - δ)
+    (h : ∀ c, H.IsPartialColoring k c → (H.numColored k c : ℝ) ≤ q * H.1) :
+    ¬ H.HasColoring k δ := by
+  rintro ⟨c, hc, hcount⟩
+  have hN : (0 : ℝ) < H.1 := by exact_mod_cast hn
+  have := mul_lt_mul_of_pos_right hq hN
+  linarith [h c hc]
+
+/-! ### NP-hardness from Fact 8.1 -/
 
 theorem graph_polytime :
     ComputableInPolyTime (fun G : Graph ↦ (G.1, adjTable G)) encGraph (encPair encNat encBits) :=
   ComputableInPolyTime.id'.of_enc_eq fun _ ↦ rfl
 
+/-- Two isolated vertices. -/
+abbrev twoPoints : Graph := ⟨2, ⊥⟩
+
+/-- The graph, with two isolated vertices in place of the graph without vertices. -/
+def nonempty (G : Graph) : Graph := if G.1 = 0 then twoPoints else G
+
+section Machine
+
+open ComputableInPolyTime
+
+theorem nonempty_polytime : ComputableInPolyTime nonempty encGraph encGraph := by
+  have h0 : ComputableInPolyTime (fun G : Graph ↦ decide (G.1 = 0)) encGraph encBool :=
+    decide_eq' ((fst _ _).comp graph_polytime) (const 0)
+  have h := ite' h0 (const twoPoints) id'
+  have : nonempty = fun G ↦ if decide (G.1 = 0) then twoPoints else G :=
+    funext fun G ↦ by simp [nonempty]
+  rw [this]
+  exact h
+
+end Machine
+
+open Classical in
+theorem twoPoints_mem_yes {ε γ η : ℝ} (hε : 0 ≤ ε) (hη : 0 ≤ η) :
+    twoPoints ∈ (bkGap ε γ η).yes := by
+  refine ⟨fun v ↦ ?_, ({0} : Finset (Fin 2)), ({1} : Finset (Fin 2)), by decide,
+    fun _ _ _ _ _ h ↦ h, fun _ _ _ _ _ h ↦ h, ?_, ?_⟩
+  · have h : ((⊥ : SimpleGraph (Fin 2)).degree v : ℝ) ≤ η * ((2 : ℕ) : ℝ) := by
+      simp only [SimpleGraph.bot_degree, Nat.cast_zero]
+      positivity
+    convert h
+  · rw [card_singleton]
+    push_cast
+    linarith
+  · rw [card_singleton]
+    push_cast
+    linarith
+
+theorem pos_of_mem_no {ε γ η : ℝ} (hγ : 0 < γ) {G : Graph} (hG : G ∈ (bkGap ε γ η).no) :
+    0 < G.1 := by
+  obtain ⟨-, -, hno⟩ := hG
+  have h0 := hno ∅ (by simp)
+  simp only [card_empty, Nat.cast_zero] at h0
+  exact_mod_cast pos_of_mul_pos_right h0 hγ.le
+
+/-- **A reduction from Fact 8.1 proves NP-hardness**: a polynomial-time map sending the
+yes-instances of `bkGap ε γ η` with a vertex to yes-instances of `Y`, and its no-instances to
+no-instances of `Y`. (The graph without vertices, a yes-instance, is first replaced by two isolated
+vertices.) -/
+theorem npHard_of_reduction {ε γ η : ℝ} (hε : 0 ≤ ε) (hγ : 0 < γ) (hη : 0 ≤ η)
+    (hNP : PromiseProblem.NPHard encGraph (bkGap ε γ η)) {Y : PromiseProblem Graph}
+    (R : Graph → Graph) (hR : ComputableInPolyTime R encGraph encGraph)
+    (hyes : ∀ G ∈ (bkGap ε γ η).yes, 0 < G.1 → R G ∈ Y.yes)
+    (hno : ∀ G ∈ (bkGap ε γ η).no, R G ∈ Y.no) : PromiseProblem.NPHard encGraph Y := by
+  refine hNP.trans ⟨R ∘ nonempty, hR.comp nonempty_polytime, fun G hG ↦ ?_, fun G hG ↦ ?_⟩
+  · change R (nonempty G) ∈ Y.yes
+    by_cases h0 : G.1 = 0
+    · have : nonempty G = twoPoints := by unfold nonempty; exact ite_eq_left h0
+      rw [this]
+      exact hyes _ (twoPoints_mem_yes hε hη) (by decide)
+    · have : nonempty G = G := by unfold nonempty; exact ite_eq_right h0
+      rw [this]
+      exact hyes G hG (Nat.pos_of_ne_zero h0)
+  · change R (nonempty G) ∈ Y.no
+    have : nonempty G = G := by unfold nonempty; exact ite_eq_right (pos_of_mem_no hγ hG).ne'
+    rw [this]
+    exact hno G hG
+
+/-! ### NP-hardness rules out algorithms -/
+
+/-- **`NP ⊆ P`**: every problem in `NP`, with any encoding of its instances, is in `P`. -/
+def NPSubsetP : Prop := ∀ ⦃T : Type⦄ (enc : T ↪ List Bool), NP enc ⊆ P enc
+
 /-- **A reduction and an algorithm give `NP ⊆ P`.** -/
-theorem npSubsetP_of_reduction {ε γ η : ℝ} (hNP : PromiseProblem.NPHard encGraph (bkGap ε γ η))
+theorem npSubsetP_of_reduction {Y : PromiseProblem Graph}
+    (hNP : PromiseProblem.NPHard encGraph Y)
     (R : Graph → Graph) (hR : ComputableInPolyTime R encGraph encGraph)
     (A : Graph → List ℕ) (hA : ComputableInPolyTime A encGraph encColoring) (k : ℕ)
     {q₀ q₁ : ℝ} (hq₀ : 0 ≤ q₀) (hq : q₀ < q₁)
-    (hyes : ∀ G ∈ (bkGap ε γ η).yes, (R G).IsPartialColoring k (A (R G)) ∧
+    (hyes : ∀ G ∈ Y.yes, (R G).IsPartialColoring k (A (R G)) ∧
       q₁ * (R G).1 ≤ (R G).numColored k (A (R G)))
-    (hno : ∀ G ∈ (bkGap ε γ η).no, 0 < (R G).1 ∧ ∀ c, (R G).IsPartialColoring k c →
+    (hno : ∀ G ∈ Y.no, 0 < (R G).1 ∧ ∀ c, (R G).IsPartialColoring k c →
       ((R G).numColored k c : ℝ) ≤ q₀ * (R G).1) :
     NPSubsetP := by
   obtain ⟨q, hq0q, hqq1⟩ := exists_rat_btwn hq
@@ -237,7 +381,7 @@ theorem npSubsetP_of_reduction {ε γ η : ℝ} (hNP : PromiseProblem.NPHard enc
       funext fun G ↦ (checkU_graph k num den (R G) (A (R G))).symm
     rw [this]
     exact h2
-  have hsolved : (bkGap ε γ η).SolvedBy f := by
+  have hsolved : Y.SolvedBy f := by
     refine ⟨fun G hG ↦ ?_, fun G hG ↦ ?_⟩
     · obtain ⟨hcol, hcount⟩ := hyes G hG
       refine (checkL_iff k num den (R G) (A (R G))).2 ⟨hcol, ?_⟩
@@ -260,5 +404,26 @@ theorem npSubsetP_of_reduction {ε γ η : ℝ} (hNP : PromiseProblem.NPHard enc
       linarith
   intro T enc
   exact hNP.NP_subset_P_of_mem_PromiseP (mem_PromiseP_iff.2 ⟨f, hf, hsolved⟩) enc
+
+
+/-- **NP-hardness rules out algorithms**: if the gap problem of `(k, δ)`-colorings of the graphs
+with property `P` is NP-hard, with `δ ≤ 1`, then a polynomial-time algorithm finding
+`(k, δ')`-colorings of them, for some `δ' < δ`, gives `NP ⊆ P`: checking its output against a
+rational threshold between `1 - δ` and `1 - δ'` solves the gap problem. -/
+theorem npSubsetP_of_npHard {P : Graph → Prop} {k : ℕ} {δ δ' : ℝ} (hδ : δ ≤ 1) (hδ' : δ' < δ)
+    (hNP : PromiseProblem.NPHard encGraph (coloringGap P k δ))
+    (A : Graph → List ℕ) (hA : ComputableInPolyTime A encGraph encColoring)
+    (hsolve : ∀ G, P G → G.IsColoring k δ' (A G)) : NPSubsetP := by
+  refine npSubsetP_of_reduction hNP id ComputableInPolyTime.id' A hA k (q₀ := 1 - δ)
+    (q₁ := 1 - δ') (by linarith) (by linarith) (fun G hG ↦ hsolve G hG.1) fun G hG ↦ ?_
+  have hpos : 0 < G.1 := by
+    by_contra h0
+    have h0' : (G.1 : ℝ) = 0 := by exact_mod_cast (show G.1 = 0 by omega)
+    refine hG ⟨[], fun u ↦ absurd u.2 (by omega), ?_⟩
+    rw [h0', mul_zero]
+    exact Nat.cast_nonneg _
+  refine ⟨hpos, fun c hc ↦ ?_⟩
+  by_contra hlt
+  exact hG ⟨c, hc, (lt_of_not_ge hlt).le⟩
 
 end BHSV25.Hard

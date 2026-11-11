@@ -19,8 +19,12 @@ namespace changed to `BHSV25.BK` and the unused parts left out.
 * Fourier facts: degree-`K` influences (OpenAI's `cutoffInfluence`) are convex, move with a
   permutation of the coordinates, and sum to at most `K` for `[-1,1]`-valued tables.
 * **Decoding** (`BHSV25.BK.few_bad`, BGHKLMM26's `kkmo_few_bad`, after Khot, Kindler, Mossel and
-  O'Donnell): on simple bi-regular Unique Games instances of small value, few left vertices `u`
-  have a coordinate of large degree-`K` influence in `2 g_u - 1`.
+  O'Donnell): on Unique Games instances of small value, few left vertices `u` have a coordinate
+  of large degree-`K` influence in `2 g_u - 1`.
+* **The instances of the reduction** (`BHSV25.BK.Good`): valid, left-regular, and with parallel
+  constraints agreeing (`BHSV25.BK.UGConsistent`), the instances that Khot's form of the Unique
+  Games Conjecture gives after regularization (`BHSV25/UG/`); their gap problem is
+  `BHSV25.BK.lrGap`, and its NP-hardness for small `ε` is `BHSV25.BK.LRHard`.
 -/
 
 @[expose] public section
@@ -44,9 +48,33 @@ def permCube {R : ℕ} (π : List ℕ) (x : Cube (Fin R)) : Cube (Fin R) :=
 /-- The constraints at the left vertex `u`. -/
 def nbrs (cs : List UGConstraint) (u : ℕ) : List UGConstraint := cs.filter fun c ↦ c.1.1 = u
 
-/-- The instances of the gap problem with `R` labels: valid, simple, bi-regular. -/
+/-- **Parallel constraints agree**: two constraints between the same two vertices have the same
+table. -/
+def UGConsistent (G : UGInstance) : Prop :=
+  ∀ c ∈ G.2.2.2, ∀ c' ∈ G.2.2.2, c.1 = c'.1 → c.2 = c'.2
+
+/-- **Left-regular**: every left vertex lies on the same number of constraints. -/
+def LeftRegular (G : UGInstance) : Prop :=
+  ∃ D : ℕ, ∀ u < G.1, (G.2.2.2.filter fun c ↦ c.1.1 = u).length = D
+
+/-- The instances of the gap problem with `R` labels: valid, with parallel constraints agreeing,
+left-regular. -/
 def Good (R : ℕ) (G : UGInstance) : Prop :=
-  UGValid G ∧ G.2.2.1 = R ∧ UGSimple G ∧ BiRegular G
+  UGValid G ∧ G.2.2.1 = R ∧ UGConsistent G ∧ LeftRegular G
+
+open Cslib.Complexity in
+/-- The gap problem of the reduction: value at least `1 - ε` against at most `ε`, on the instances
+of `BHSV25.BK.Good` with `R` labels. -/
+noncomputable def lrGap (R : ℕ) (ε : ℝ) : PromiseProblem UGInstance :=
+  (PromiseProblem.gapMax ugValue (fun _ ↦ 1 - ε) (fun _ ↦ ε)).restrict {G | Good R G}
+
+open Cslib.Complexity in
+/-- **The hardness the reduction starts from**: for all small `ε > 0`, some number of labels makes
+`BHSV25.BK.lrGap` NP-hard. It follows from the Unique Games Conjecture on graphs
+(`BHSV25.UG.lrHard_of_khotUGC`). -/
+def LRHard : Prop :=
+  ∃ ε₀ : ℝ, 0 < ε₀ ∧ ε₀ ≤ 1 / 2 ∧
+    ∀ ε : ℝ, 0 < ε → ε ≤ ε₀ → ∃ R : ℕ, PromiseProblem.NPHard encUG (lrGap R ε)
 
 /-- The averaged long code `g_u(x) = E_{(u,v) ∈ cs} f_v(π_{uv} x)` of the left vertex `u`. -/
 noncomputable def avgTable {R : ℕ} (cs : List UGConstraint) (f : ℕ → Cube (Fin R) → Bool) (u : ℕ)
@@ -217,7 +245,7 @@ theorem sum_nbrs {G : UGInstance} (hv : UGValid G) (φ : UGConstraint → ℝ) :
 theorem exists_leftDeg {R : ℕ} {G : UGInstance} (hG : Good R G) (hcs : G.2.2.2 ≠ []) :
     ∃ D : ℕ, 0 < D ∧ 0 < G.1 ∧ (∀ u < G.1, (nbrs G.2.2.2 u).length = D) ∧
       G.2.2.2.length = G.1 * D := by
-  obtain ⟨D, hD⟩ := hG.2.2.2.1
+  obtain ⟨D, hD⟩ := hG.2.2.2
   obtain ⟨c, hc⟩ := List.exists_mem_of_ne_nil _ hcs
   have hu := (hG.1 c hc).1
   have hlen : ∀ u < G.1, (nbrs G.2.2.2 u).length = D := hD

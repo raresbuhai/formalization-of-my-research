@@ -7,7 +7,7 @@ import Mathlib.Data.List.GetD
 /-!
 # Completeness of the reduction
 
-From a labeling `(σ, τ)` satisfying a `1 - δ` fraction of the constraints of a simple bi-regular
+From a labeling `(σ, τ)` satisfying a `1 - δ` fraction of the constraints of a left-regular
 instance (`BHSV25/BK/README.md`, Section 2): a vertex `(u, k, z, a)` is *accepted* when its `t`
 constraints are satisfied and `σ(u)` is not free; the accepted vertices with `z_{σ(u)} = b` form
 an independent set `I_b`, since two demands at a right vertex `v` agree at the coordinate `τ(v)`
@@ -276,7 +276,7 @@ theorem acc_count (hv : UGValid (m, n, P.R, cs)) {L : ℕ}
 
 end Complete
 
-/-- **Completeness** [BHSV25/BK/README.md, Section 2]: on a simple bi-regular instance with
+/-- **Completeness** [BHSV25/BK/README.md, Section 2]: on a left-regular instance with
 constraints whose value is at least `1 - δ`, one copy of the graph has two disjoint independent
 sets of at least `(1 - t δ - 1/M) N / 2` vertices each. -/
 theorem complete {G : UGInstance} (hG : Good P.R G) (hL : ldeg G.2.2.2 ≠ 0) (hM : 0 < P.M)

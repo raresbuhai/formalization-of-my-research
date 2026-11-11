@@ -3,71 +3,28 @@ module
 public import BHSV25.Hard.Model
 
 /-!
-# Theorems 1.5 and 1.8 (2) from Theorem 1.9 (2)
+# Theorem 1.8 (2) from Theorem 1.9 (2), and the model of Theorem 1.5
 
 * **Theorem 1.8 (2)** (Corollary 8.3, `BHSV25.Hard.expanderColoring_repeatedRows_hardness`): for a
   model with repeated rows, `α > 0` for its stationary distribution (the positive `π` of the
   definition, normalized), and `δ = α / 2` works, by Theorem 1.9 (2) with `γ = α / 2`.
-* **Theorem 1.5** (Corollary 8.4, `BHSV25.Hard.threeColoring_unbalanced_hardness`): the model
-  `[[0, 1/2, 1/2], [1, 0, 0], [1, 0, 0]]` with `π = (1/2, 1/4, 1/4)` has characteristic polynomial
-  `X (X - 1) (X + 1)` and `α = 1/2`; an `(M, ε)`-coloring gives `3` independent sets covering all
-  but `ε n` vertices, by uncoloring the vertices covering its monochromatic edges
-  (`BHSV25.Hard.hasColoring_of_mColorable`).
+* **The model of Theorem 1.5** (`BHSV25.Hard.M3`): `[[0, 1/2, 1/2], [1, 0, 0], [1, 0, 0]]` with
+  `π = (1/2, 1/4, 1/4)` has characteristic polynomial `X (X - 1) (X + 1)` and `α = 1/2`.
+  Theorem 1.5 itself is in `BHSV25/Hard/Unbalanced.lean`.
 -/
 
 @[expose] public section
 
 namespace BHSV25.Hard
 
-open Finset Turing.MultiTapeTM Polynomial
-
-/-- An `(M, ε)`-coloring gives a `(k, ε)`-coloring: uncolor the vertices covering the
-monochromatic edges. -/
-theorem hasColoring_of_mColorable {k : ℕ} {M : Matrix (Fin k) (Fin k) ℝ} {ε : ℝ} (G : Graph)
-    (h : G.MColorable M ε) : G.HasColoring k ε := by
-  classical
-  obtain ⟨χ, -, S, hS, hmono⟩ := h
-  set c : List ℕ := List.ofFn fun v : Fin G.1 ↦ if v ∈ S then k else (χ v : ℕ)
-  have hcol : ∀ v, G.color k c v = if v ∈ S then k else (χ v : ℕ) := by
-    intro v
-    unfold Graph.color
-    rw [List.getD_eq_getElem?_getD, List.getElem?_ofFn]
-    simp only [v.2, ↓reduceDIte, Option.getD_some, Fin.eta]
-  refine ⟨c, fun u v huv hu ↦ ?_, ?_⟩
-  · rw [hcol] at hu ⊢
-    rw [hcol]
-    have huS : u ∉ S := by intro h; rw [ite_eq_left h] at hu; exact lt_irrefl _ hu
-    rw [ite_eq_right huS]
-    by_cases hvS : v ∈ S
-    · rw [ite_eq_left hvS]; exact (χ u).2.ne
-    · rw [ite_eq_right hvS]
-      intro heq
-      rcases hmono u v huv (Fin.ext heq) with h | h
-      · exact huS h
-      · exact hvS h
-  · unfold Graph.numColored
-    have hsub : Sᶜ ⊆ univ.filter fun v ↦ G.color k c v < k := by
-      intro v hv
-      rw [mem_compl] at hv
-      simp only [mem_filter, mem_univ, true_and, hcol, ite_eq_right hv]
-      exact (χ v).2
-    have h1 := card_le_card hsub
-    rw [card_compl, Fintype.card_fin] at h1
-    have h2 : (S.card : ℝ) ≤ G.1 := by exact_mod_cast (card_le_univ S).trans (by simp)
-    have h3 : ((G.1 - S.card : ℕ) : ℝ) = G.1 - S.card := by
-      rw [Nat.cast_sub (by exact_mod_cast h2)]
-    have h4 : ((G.1 - S.card : ℕ) : ℝ) ≤ (univ.filter fun v ↦ G.color k c v < k).card := by
-      exact_mod_cast h1
-    linarith
+open Finset Turing.MultiTapeTM Polynomial Cslib.Complexity
 
 /-- **Theorem 1.8 (2)** of [BHSV25] (Corollary 8.3). -/
-theorem expanderColoring_repeatedRows_hardness (hUGC : UniqueGames.UGC) {k : ℕ}
+theorem expanderColoring_repeatedRows_hardness (hUGC : UniqueGames.KhotUGC) {k : ℕ}
     (M : Matrix (Fin k) (Fin k) ℝ) (hM : IsModel M) (hrows : ¬ Function.Injective M) :
     ∃ δ : ℝ, 0 < δ ∧ ∀ ε lam : ℝ, 0 < ε → 0 < lam →
-      ∀ A : Graph → List ℕ, ComputableInPolyTime A encGraph encColoring →
-        (∀ G : Graph, G.IsRegular → G.IsOneSidedExpander lam → G.MColorable M ε →
-          G.IsColoring k δ (A G)) →
-        NPSubsetP := by
+      PromiseProblem.NPHard encGraph (coloringGap (fun G ↦ G.IsRegular ∧
+        G.IsOneSidedExpander lam ∧ G.MColorable M ε) k δ) := by
   classical
   obtain ⟨π, hπpos, hrev⟩ := hM.reversible
   obtain ⟨a, b, hab, hne⟩ : ∃ a b, M a = M b ∧ a ≠ b := by
@@ -91,11 +48,10 @@ theorem expanderColoring_repeatedRows_hardness (hUGC : UniqueGames.UGC) {k : ℕ
     refine lt_min (hπ'.1 a) ?_
     exact sum_pos' (fun d _ ↦ (hπ'.1 d).le)
       ⟨b, mem_filter.2 ⟨mem_univ _, hne.symm, hab.symm⟩, hπ'.1 b⟩
-  refine ⟨alpha M π' / 2, by positivity, fun ε lam hε hlam A hA hsolve ↦ ?_⟩
-  refine expanderColoring_hardness hUGC M hM π' hπ' (alpha M π' / 2) ε lam (by positivity) hε
-    hlam A hA fun G h1 h2 h3 ↦ ?_
-  rw [show alpha M π' - alpha M π' / 2 = alpha M π' / 2 by ring]
-  exact hsolve G h1 h2 h3
+  refine ⟨alpha M π' / 2, by positivity, fun ε lam hε hlam ↦ ?_⟩
+  have h := expanderColoring_hardness hUGC M hM π' hπ' (alpha M π' / 2) ε lam (by positivity)
+    (by linarith) hε hlam
+  rwa [show alpha M π' - alpha M π' / 2 = alpha M π' / 2 by ring] at h
 
 /-! ### The model of Theorem 1.5 -/
 
@@ -149,18 +105,5 @@ theorem alpha_M3 : alpha M3 π3 = 1 / 2 := by
   rw [Fin.sum_univ_three, e0, e1, e2]
   simp [π3]
   norm_num
-
-/-- **Theorem 1.5** of [BHSV25] (Corollary 8.4). -/
-theorem threeColoring_unbalanced_hardness (hUGC : UniqueGames.UGC) :
-    ∀ ε γ lam : ℝ, 0 < ε → 0 < γ → 0 < lam →
-      ∀ A : Graph → List ℕ, ComputableInPolyTime A encGraph encColoring →
-        (∀ G : Graph, G.IsRegular → G.IsOneSidedExpander lam → G.HasColoring 3 ε →
-          G.IsColoring 3 (1 / 2 - γ) (A G)) →
-        NPSubsetP := by
-  intro ε γ lam hε hγ hlam A hA hsolve
-  refine expanderColoring_hardness hUGC M3 isModel_M3 π3 isStationary_M3 γ ε lam hγ hε hlam A hA
-    fun G h1 h2 h3 ↦ ?_
-  rw [alpha_M3]
-  exact hsolve G h1 h2 (hasColoring_of_mColorable G h3)
 
 end BHSV25.Hard

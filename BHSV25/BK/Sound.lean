@@ -126,10 +126,10 @@ namespace Prm
 
 variable (P : Prm)
 
-/-- **A vertex whose `a` is not `0` does not clash with itself**, on simple instances: two of its
-demands at the same right vertex come from the same constraint. -/
+/-- **A vertex whose `a` is not `0` does not clash with itself**, on instances whose parallel
+constraints agree: two of its demands at the same right vertex come from the same table. -/
 theorem self_noclash {m n : ℕ} {cs : List UGConstraint} (hv : UGValid (m, n, P.R, cs))
-    (hs : UGSimple (m, n, P.R, cs)) {L : ℕ} (hlen : ∀ u < m, (nbrs cs u).length = L)
+    (hs : UGConsistent (m, n, P.R, cs)) {L : ℕ} (hlen : ∀ u < m, (nbrs cs u).length = L)
     {v : P.Vtx m L} (ha : ¬∀ j, (v.1.1.1 j : ℕ) = 0) (p q : Fin P.t) :
     P.clash cs (P.rvS v) (P.rvS v) p q = false := by
   by_contra h
@@ -138,8 +138,8 @@ theorem self_noclash {m n : ℕ} {cs : List UGConstraint} (hv : UGValid (m, n, P
   obtain ⟨hw, hall⟩ := h
   obtain ⟨hc, hcu⟩ := mem_nbrs (P.conV_mem hlen v p)
   obtain ⟨hc', hcu'⟩ := mem_nbrs (P.conV_mem hlen v q)
-  have heq : P.conV cs v p = P.conV cs v q :=
-    List.inj_on_of_nodup_map hs hc hc' (Prod.ext (hcu.trans hcu'.symm) hw)
+  have hpair : (P.conV cs v p).1 = (P.conV cs v q).1 := Prod.ext (hcu.trans hcu'.symm) hw
+  have heq : P.conV cs v p = P.conV cs v q := Prod.ext hpair (hs _ hc _ hc' hpair)
   apply ha
   intro j
   have hval := hv _ hc
@@ -172,7 +172,8 @@ theorem sum_ind_zero_le {m L : ℕ} (hR : 0 < P.R) (hM : 0 < P.M) :
   have h0 : (0 : ℝ) ≤ 2 ^ P.R * (L : ℝ) ^ P.t * m := by positivity
   nlinarith
 
-/-- **Soundness** [BHSV25/BK/README.md, Section 3]: on a simple bi-regular instance with
+/-- **Soundness** [BHSV25/BK/README.md, Section 3]: on a left-regular instance with agreeing
+parallel constraints and
 constraints, if the subcube moments of the averaged long codes without influential coordinates
 are at most `γ / 8` (It Ain't Over Till It's Over) and at most `γ m / 8` left vertices have an
 influential coordinate (decoding, on instances of small value), then one copy of the graph has
