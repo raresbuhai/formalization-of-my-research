@@ -9,6 +9,7 @@ results stated in `Challenge.lean` and proved in `Solution.lean`:
 | [`BKS23`](BKS23) | Buhai, Kothari, Steurer. *Algorithms approaching the threshold for semi-random planted clique*. STOC 2023. [arXiv:2212.05619](https://arxiv.org/abs/2212.05619) |
 | [`BS23`](BS23) | Buhai, Steurer. *Beyond parallel pancakes: quasi-polynomial time guarantees for non-spherical Gaussian mixtures*. COLT 2023. [arXiv:2112.05445](https://arxiv.org/abs/2112.05445) |
 | [`BBKS24`](BBKS24) | Błasiok, Buhai, Kothari, Steurer. *Semirandom planted clique and the restricted isometry property*. FOCS 2024. [arXiv:2404.14159](https://arxiv.org/abs/2404.14159) |
+| [`BDT24`](BDT24) | Buhai, Ding, Tiegel. *Computational-statistical gaps for improper learning in sparse linear regression*. COLT 2024. [arXiv:2402.14103](https://arxiv.org/abs/2402.14103) |
 | [`BHJK25`](BHJK25) | Buhai, Hsieh, Jain, Kothari. *The quasi-polynomial low-degree conjecture is false*. FOCS 2025. [arXiv:2505.17360](https://arxiv.org/abs/2505.17360) |
 | [`BHSV25`](BHSV25) | Buhai, Hua, Steurer, Vári-Kakas. *Finding colorings in one-sided expanders*. FOCS 2025. [arXiv:2508.02825](https://arxiv.org/abs/2508.02825) |
 | [`ABBKS26`](ABBKS26) | Anderson, Bafna, Buhai, Kothari, Steurer. *Dimension reduction via sum-of-squares and improved clustering algorithms for non-spherical mixtures*. COLT 2026. [arXiv:2411.12438](https://arxiv.org/abs/2411.12438) |

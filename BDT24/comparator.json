@@ -1,0 +1,14 @@
+{
+  "challenge_module": "BDT24.Challenge",
+  "solution_module": "BDT24.Solution",
+  "theorem_names": [
+    "BDT24.negSPCA_of_sparse_regression",
+    "BDT24.lowDegree_negSPCA",
+    "BDT24.sq_negSPCA"
+  ],
+  "permitted_axioms": [
+    "propext",
+    "Quot.sound",
+    "Classical.choice"
+  ]
+}

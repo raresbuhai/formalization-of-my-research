@@ -2,7 +2,7 @@ name = "raresbuhai-papers"
 version = "0.1.0"
 keywords = ["math"]
 license = "Apache-2.0"
-defaultTargets = ["Background", "BKS23", "BBKS24", "BGHKLMM26", "BCFGJPSSV26", "BHSV25", "BMW26", "BS23", "BB20", "BHJK25", "ABBKS26", "KMedian195"]
+defaultTargets = ["Background", "BKS23", "BBKS24", "BGHKLMM26", "BCFGJPSSV26", "BHSV25", "BMW26", "BS23", "BB20", "BHJK25", "ABBKS26", "BDT24", "KMedian195"]
 
 [leanOptions]
 pp.unicode.fun = true # pretty-prints `fun a ↦ b`
@@ -112,4 +112,11 @@ leanOptions = { weak.linter.style.header = false }
 [[lean_lib]]
 name = "ABBKS26"
 globs = ["ABBKS26.*"]
+leanOptions = { weak.linter.style.header = false }
+
+# arXiv:2402.14103 — Computational-statistical gaps for improper learning in sparse linear
+# regression.
+[[lean_lib]]
+name = "BDT24"
+globs = ["BDT24.*"]
 leanOptions = { weak.linter.style.header = false }
