@@ -1,0 +1,15 @@
+{
+  "challenge_module": "B25.Challenge",
+  "solution_module": "B25.Solution",
+  "theorem_names": [
+    "B25.partiallyRotated_of_uniform",
+    "B25.partiallyRotated_of_subgaussian",
+    "B25.re_of_partiallyRotated",
+    "B25.lasso_of_partiallyRotated"
+  ],
+  "permitted_axioms": [
+    "propext",
+    "Quot.sound",
+    "Classical.choice"
+  ]
+}
